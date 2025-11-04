@@ -1,0 +1,12 @@
+{"time":"2025-09-28T08:18:23.324809229Z","level":"INFO","msg":"stream: starting","core version":"0.22.0"}
+{"time":"2025-09-28T08:18:23.565489563Z","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2025-09-28T08:18:23.56558352Z","level":"INFO","msg":"stream: created new stream","id":"lecxibic"}
+{"time":"2025-09-28T08:18:23.565597503Z","level":"INFO","msg":"stream: started","id":"lecxibic"}
+{"time":"2025-09-28T08:18:23.565631301Z","level":"INFO","msg":"writer: started","stream_id":"lecxibic"}
+{"time":"2025-09-28T08:18:23.565659126Z","level":"INFO","msg":"sender: started","stream_id":"lecxibic"}
+{"time":"2025-09-28T08:18:23.565655362Z","level":"INFO","msg":"handler: started","stream_id":"lecxibic"}
+{"time":"2025-09-28T08:18:23.566519572Z","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2025-09-28T08:18:34.710891119Z","level":"INFO","msg":"stream: closing","id":"lecxibic"}
+{"time":"2025-09-28T08:18:34.711131716Z","level":"INFO","msg":"handler: closed","stream_id":"lecxibic"}
+{"time":"2025-09-28T08:18:34.711186624Z","level":"INFO","msg":"sender: closed","stream_id":"lecxibic"}
+{"time":"2025-09-28T08:18:34.71119379Z","level":"INFO","msg":"stream: closed","id":"lecxibic"}

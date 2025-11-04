@@ -1,0 +1,100 @@
+2025-09-30 09:25:47.517966: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2025-09-30 09:25:47.570550: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:9261] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2025-09-30 09:25:47.570613: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:607] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2025-09-30 09:25:47.572849: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1515] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2025-09-30 09:25:47.581199: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 AVX_VNNI AMX_TILE AMX_INT8 AMX_BF16 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2025-09-30 09:25:49.339335: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+[robosuite WARNING] No private macro file found! (macros.py:53)
+[robosuite WARNING] It is recommended to use a private macro file (macros.py:54)
+[robosuite WARNING] To setup, run: python /data/mmc_jhzhang/envs/vla-adapter/lib/python3.10/site-packages/robosuite/scripts/setup_macros.py (macros.py:55)
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+2025-09-30 09:25:59.142983: W tensorflow/core/common_runtime/gpu/gpu_device.cc:2348] TensorFlow was not built with CUDA kernel binaries compatible with compute capability 12.0. CUDA kernels will be jit-compiled from PTX, which could take 30 minutes or longer.
+Using LIBERO constants:
+  NUM_ACTIONS_CHUNK = 8
+  ACTION_DIM = 7
+  PROPRIO_DIM = 8
+  ACTION_PROPRIO_NORMALIZATION_TYPE = bounds_q99
+If needed, manually set the correct constants in `prismatic/vla/constants.py`!
+Instantiating pretrained VLA policy...
+Created backup of original config at: /home/mmc_jhzhang/VLA-Adapter/outputs/configs+libero_object_no_noops+b16+lr-0.0002+lora-r64+dropout-0.0--image_aug--VLA-Adapter--libero_spatial_no_noops----5000_chkpt/config.json.back.20250930_092611
+Updated config.json at: /home/mmc_jhzhang/VLA-Adapter/outputs/configs+libero_object_no_noops+b16+lr-0.0002+lora-r64+dropout-0.0--image_aug--VLA-Adapter--libero_spatial_no_noops----5000_chkpt/config.json
+Changes made:
+  - Set AutoConfig to "configuration_prismatic.OpenVLAConfig"
+  - Set AutoModelForVision2Seq to "modeling_prismatic.OpenVLAForActionPrediction"
+
+------------------------------------------------------------------------------------------------
+No modeling_prismatic.py found in checkpoint directory.
+Copied current version from: ./prismatic/extern/hf/modeling_prismatic.py
+To checkpoint location: /home/mmc_jhzhang/VLA-Adapter/outputs/configs+libero_object_no_noops+b16+lr-0.0002+lora-r64+dropout-0.0--image_aug--VLA-Adapter--libero_spatial_no_noops----5000_chkpt/modeling_prismatic.py
+------------------------------------------------------------------------------------------------
+
+
+------------------------------------------------------------------------------------------------
+No configuration_prismatic.py found in checkpoint directory.
+Copied current version from: ./prismatic/extern/hf/configuration_prismatic.py
+To checkpoint location: /home/mmc_jhzhang/VLA-Adapter/outputs/configs+libero_object_no_noops+b16+lr-0.0002+lora-r64+dropout-0.0--image_aug--VLA-Adapter--libero_spatial_no_noops----5000_chkpt/configuration_prismatic.py
+------------------------------------------------------------------------------------------------
+
+Loaded model: <class 'prismatic.extern.hf.modeling_prismatic.OpenVLAForActionPrediction'>
+09/30 [09:26:22] INFO     | >> Logging to local log file:                                run_libero_eval.py:206
+                          ./experiments/logs/EVAL-libero_object-openvla-2025_09_30-09_26                       
+                          _11.txt                                                                              
+[info] using task orders [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+                 INFO     | >> Task suite: libero_object                                 run_libero_eval.py:222
+  0%|          | 0/10 [00:00<?, ?it/s]                 INFO     | >> Using default initial states                              run_libero_eval.py:222
+
+  0%|          | 0/50 [00:00<?, ?it/s][A09/30 [09:26:27] INFO     | >>                                                           run_libero_eval.py:222
+                          Task: pick up the alphabet soup and place it in the basket                           
+                 INFO     | >> Starting episode 1...                                     run_libero_eval.py:222
+huggingface/tokenizers: The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
+To disable this warning, you can either:
+	- Avoid using `tokenizers` before the fork if possible
+	- Explicitly set the environment variable TOKENIZERS_PARALLELISM=(true | false)
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_30/2025_09_30-09_26_11--episode=1--success=False--task=pick_up_the_alphabet_soup_and_place_it_in_the_bask.mp4
+09/30 [09:26:39] INFO     | >> Success: False                                            run_libero_eval.py:222
+                 INFO     | >> # episodes completed so far: 1                            run_libero_eval.py:222
+                 INFO     | >> # successes: 0 (0.0%)                                     run_libero_eval.py:222
+
+  2%|▏         | 1/50 [00:12<10:08, 12.42s/it][A                 INFO     | >>                                                           run_libero_eval.py:222
+                          Task: pick up the alphabet soup and place it in the basket                           
+                 INFO     | >> Starting episode 2...                                     run_libero_eval.py:222
+huggingface/tokenizers: The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
+To disable this warning, you can either:
+	- Avoid using `tokenizers` before the fork if possible
+	- Explicitly set the environment variable TOKENIZERS_PARALLELISM=(true | false)
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_30/2025_09_30-09_26_11--episode=2--success=False--task=pick_up_the_alphabet_soup_and_place_it_in_the_bask.mp4
+09/30 [09:26:52] INFO     | >> Success: False                                            run_libero_eval.py:222
+                 INFO     | >> # episodes completed so far: 2                            run_libero_eval.py:222
+                 INFO     | >> # successes: 0 (0.0%)                                     run_libero_eval.py:222
+
+  4%|▍         | 2/50 [00:24<09:46, 12.22s/it][A                 INFO     | >>                                                           run_libero_eval.py:222
+                          Task: pick up the alphabet soup and place it in the basket                           
+                 INFO     | >> Starting episode 3...                                     run_libero_eval.py:222
+huggingface/tokenizers: The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
+To disable this warning, you can either:
+	- Avoid using `tokenizers` before the fork if possible
+	- Explicitly set the environment variable TOKENIZERS_PARALLELISM=(true | false)
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_30/2025_09_30-09_26_11--episode=3--success=True--task=pick_up_the_alphabet_soup_and_place_it_in_the_bask.mp4
+09/30 [09:26:58] INFO     | >> Success: True                                                                                         run_libero_eval.py:222
+                 INFO     | >> # episodes completed so far: 3                                                                        run_libero_eval.py:222
+                 INFO     | >> # successes: 1 (33.3%)                                                                                run_libero_eval.py:222
+
+  6%|▌         | 3/50 [00:30<07:23,  9.43s/it][A                 INFO     | >>                                                                                                       run_libero_eval.py:222
+                          Task: pick up the alphabet soup and place it in the basket                                                                       
+                 INFO     | >> Starting episode 4...                                                                                 run_libero_eval.py:222
+huggingface/tokenizers: The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
+To disable this warning, you can either:
+	- Avoid using `tokenizers` before the fork if possible
+	- Explicitly set the environment variable TOKENIZERS_PARALLELISM=(true | false)
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_30/2025_09_30-09_26_11--episode=4--success=True--task=pick_up_the_alphabet_soup_and_place_it_in_the_bask.mp4
+09/30 [09:27:04] INFO     | >> Success: True                                                                                         run_libero_eval.py:222
+                 INFO     | >> # episodes completed so far: 4                                                                        run_libero_eval.py:222
+                 INFO     | >> # successes: 2 (50.0%)                                                                                run_libero_eval.py:222
+
+  8%|▊         | 4/50 [00:37<06:20,  8.27s/it][A                 INFO     | >>                                                                                                       run_libero_eval.py:222
+                          Task: pick up the alphabet soup and place it in the basket                                                                       
+                 INFO     | >> Starting episode 5...                                                                                 run_libero_eval.py:222

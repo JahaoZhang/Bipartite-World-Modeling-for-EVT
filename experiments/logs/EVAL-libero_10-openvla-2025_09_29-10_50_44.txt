@@ -1,0 +1,117 @@
+Task suite: libero_10
+Using default initial states
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 1...
+Episode error: 'NoneType' object has no attribute 'reshape'
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_29/2025_09_29-10_50_44--episode=1--success=False--task=put_both_the_alphabet_soup_and_the_tomato_sauce_in.mp4
+Success: False
+# episodes completed so far: 1
+# successes: 0 (0.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 2...
+Episode error: 'NoneType' object has no attribute 'reshape'
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_29/2025_09_29-10_50_44--episode=2--success=False--task=put_both_the_alphabet_soup_and_the_tomato_sauce_in.mp4
+Success: False
+# episodes completed so far: 2
+# successes: 0 (0.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 3...
+Episode error: 'NoneType' object has no attribute 'reshape'
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_29/2025_09_29-10_50_44--episode=3--success=False--task=put_both_the_alphabet_soup_and_the_tomato_sauce_in.mp4
+Success: False
+# episodes completed so far: 3
+# successes: 0 (0.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 4...
+Episode error: 'NoneType' object has no attribute 'reshape'
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_29/2025_09_29-10_50_44--episode=4--success=False--task=put_both_the_alphabet_soup_and_the_tomato_sauce_in.mp4
+Success: False
+# episodes completed so far: 4
+# successes: 0 (0.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 5...
+Episode error: 'NoneType' object has no attribute 'reshape'
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_29/2025_09_29-10_50_44--episode=5--success=False--task=put_both_the_alphabet_soup_and_the_tomato_sauce_in.mp4
+Success: False
+# episodes completed so far: 5
+# successes: 0 (0.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 6...
+Episode error: 'NoneType' object has no attribute 'reshape'
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_29/2025_09_29-10_50_44--episode=6--success=False--task=put_both_the_alphabet_soup_and_the_tomato_sauce_in.mp4
+Success: False
+# episodes completed so far: 6
+# successes: 0 (0.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 7...
+Episode error: 'NoneType' object has no attribute 'reshape'
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_29/2025_09_29-10_50_44--episode=7--success=False--task=put_both_the_alphabet_soup_and_the_tomato_sauce_in.mp4
+Success: False
+# episodes completed so far: 7
+# successes: 0 (0.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 8...
+Episode error: 'NoneType' object has no attribute 'reshape'
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_29/2025_09_29-10_50_44--episode=8--success=False--task=put_both_the_alphabet_soup_and_the_tomato_sauce_in.mp4
+Success: False
+# episodes completed so far: 8
+# successes: 0 (0.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 9...
+Episode error: 'NoneType' object has no attribute 'reshape'
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_29/2025_09_29-10_50_44--episode=9--success=False--task=put_both_the_alphabet_soup_and_the_tomato_sauce_in.mp4
+Success: False
+# episodes completed so far: 9
+# successes: 0 (0.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 10...
+Episode error: 'NoneType' object has no attribute 'reshape'
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_29/2025_09_29-10_50_44--episode=10--success=False--task=put_both_the_alphabet_soup_and_the_tomato_sauce_in.mp4
+Success: False
+# episodes completed so far: 10
+# successes: 0 (0.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 11...
+Episode error: 'NoneType' object has no attribute 'reshape'
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_29/2025_09_29-10_50_44--episode=11--success=False--task=put_both_the_alphabet_soup_and_the_tomato_sauce_in.mp4
+Success: False
+# episodes completed so far: 11
+# successes: 0 (0.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 12...
+Episode error: 'NoneType' object has no attribute 'reshape'
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_29/2025_09_29-10_50_44--episode=12--success=False--task=put_both_the_alphabet_soup_and_the_tomato_sauce_in.mp4
+Success: False
+# episodes completed so far: 12
+# successes: 0 (0.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 13...
+Episode error: 'NoneType' object has no attribute 'reshape'
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_29/2025_09_29-10_50_44--episode=13--success=False--task=put_both_the_alphabet_soup_and_the_tomato_sauce_in.mp4
+Success: False
+# episodes completed so far: 13
+# successes: 0 (0.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 14...
+Episode error: 'NoneType' object has no attribute 'reshape'
+Saved rollout MP4 at path ./rollouts/vla-adapter/2025_09_29/2025_09_29-10_50_44--episode=14--success=False--task=put_both_the_alphabet_soup_and_the_tomato_sauce_in.mp4
+Success: False
+# episodes completed so far: 14
+# successes: 0 (0.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 15...

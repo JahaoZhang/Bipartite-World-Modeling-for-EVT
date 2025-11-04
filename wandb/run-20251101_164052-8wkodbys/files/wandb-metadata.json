@@ -1,0 +1,141 @@
+{
+  "os":  "Linux-5.15.0-160-generic-x86_64-with-glibc2.35",
+  "python":  "CPython 3.10.16",
+  "startedAt":  "2025-11-01T16:40:52.173925Z",
+  "args":  [
+    "--vlm_path",
+    "pretrained_models/prism-qwen25-extra-dinosiglip-224px-0_5b",
+    "--config_file_path",
+    "pretrained_models/configs",
+    "--data_root_dir",
+    "/home/mmc_jhzhang/tensorflow_datasets",
+    "--dataset_name",
+    "envs_dataset",
+    "--run_root_dir",
+    "outputs",
+    "--use_film",
+    "False",
+    "--num_images_in_input",
+    "1",
+    "--use_proprio",
+    "False",
+    "--use_lora",
+    "True",
+    "--use_fz",
+    "False",
+    "--use_minivlm",
+    "True",
+    "--image_aug",
+    "True",
+    "--num_steps_before_decay",
+    "200000",
+    "--max_steps",
+    "200005",
+    "--save_freq",
+    "5000",
+    "--save_latest_checkpoint_only",
+    "False",
+    "--merge_lora_during_training",
+    "True",
+    "--batch_size",
+    "4",
+    "--grad_accumulation_steps",
+    "4",
+    "--learning_rate",
+    "2e-4",
+    "--lora_rank",
+    "32",
+    "--use_pro_version",
+    "True",
+    "--wandb_entity",
+    "kininialini-tianjin-university",
+    "--wandb_project",
+    "vla-adapter-track",
+    "--run_id_note",
+    "VLA-Adapter--track--"
+  ],
+  "program":  "/home/mmc_jhzhang/VLA-Adapter/vla-scripts/finetune.py",
+  "codePath":  "vla-scripts/finetune.py",
+  "codePathLocal":  "vla-scripts/finetune.py",
+  "git":  {
+    "remote":  "https://github.com/OpenHelix-Team/VLA-Adapter.git",
+    "commit":  "40c5a793e8948e354f0f7b5ef37f74d8279768b4"
+  },
+  "email":  "kininialini@gmail.com",
+  "root":  "/home/mmc_jhzhang/VLA-Adapter",
+  "host":  "hr-5090-132-18",
+  "executable":  "/data/mmc_jhzhang/envs/vla-adapter/bin/python3.10",
+  "cpu_count":  64,
+  "cpu_count_logical":  128,
+  "gpu":  "NVIDIA GeForce RTX 5090",
+  "gpu_count":  8,
+  "disk":  {
+    "/":  {
+      "total":  "1341564616704",
+      "used":  "308135768064"
+    }
+  },
+  "memory":  {
+    "total":  "540656193536"
+  },
+  "gpu_nvidia":  [
+    {
+      "name":  "NVIDIA GeForce RTX 5090",
+      "memoryTotal":  "34190917632",
+      "cudaCores":  21760,
+      "architecture":  "Blackwell",
+      "uuid":  "GPU-2e5d181d-c5d0-b2a5-dc91-b82c167338a9"
+    },
+    {
+      "name":  "NVIDIA GeForce RTX 5090",
+      "memoryTotal":  "34190917632",
+      "cudaCores":  21760,
+      "architecture":  "Blackwell",
+      "uuid":  "GPU-1bb011b5-67a5-c73f-7aab-24612f8af9cb"
+    },
+    {
+      "name":  "NVIDIA GeForce RTX 5090",
+      "memoryTotal":  "34190917632",
+      "cudaCores":  21760,
+      "architecture":  "Blackwell",
+      "uuid":  "GPU-e65fe0c3-8060-2ba5-7e3f-9b36ac6205ba"
+    },
+    {
+      "name":  "NVIDIA GeForce RTX 5090",
+      "memoryTotal":  "34190917632",
+      "cudaCores":  21760,
+      "architecture":  "Blackwell",
+      "uuid":  "GPU-b317dc17-9db9-fcb4-07a3-a22d629d8ccd"
+    },
+    {
+      "name":  "NVIDIA GeForce RTX 5090",
+      "memoryTotal":  "34190917632",
+      "cudaCores":  21760,
+      "architecture":  "Blackwell",
+      "uuid":  "GPU-e7a04b2a-34ff-f749-01a7-956aff23453b"
+    },
+    {
+      "name":  "NVIDIA GeForce RTX 5090",
+      "memoryTotal":  "34190917632",
+      "cudaCores":  21760,
+      "architecture":  "Blackwell",
+      "uuid":  "GPU-d66bbe3d-4c43-b74c-ee91-cbe03377165e"
+    },
+    {
+      "name":  "NVIDIA GeForce RTX 5090",
+      "memoryTotal":  "34190917632",
+      "cudaCores":  21760,
+      "architecture":  "Blackwell",
+      "uuid":  "GPU-aaad8106-de1a-2f87-06e8-1ac8be8a5e6b"
+    },
+    {
+      "name":  "NVIDIA GeForce RTX 5090",
+      "memoryTotal":  "34190917632",
+      "cudaCores":  21760,
+      "architecture":  "Blackwell",
+      "uuid":  "GPU-3b878e23-4c17-5b65-a16c-95d408be6a1b"
+    }
+  ],
+  "cudaVersion":  "12.8",
+  "writerId":  "n8h73k0ur44ezsf5xjabzunv9wop0xqh"
+}
