@@ -36,20 +36,28 @@ class RLDSBatchTransform:
     use_wrist_image: bool = False
     use_proprio: bool = False
     use_minivlm: bool = False
+    image_num: int = 0
 
 
     def __call__(self, rlds_batch: Dict[str, Any]) -> Dict[str, Any]:
         """Converts a RLDS batch to the format expected by the OpenVLA collator/models."""
-        dataset_name, current_action = rlds_batch["dataset_name"], rlds_batch["action"][0]
-        img = Image.fromarray(rlds_batch["observation"]["image_primary"][0])
-        lang = rlds_batch["task"]["language_instruction"].decode().lower()
-        actions = rlds_batch["action"]
+        # dataset_name, current_action = rlds_batch["dataset_name"], rlds_batch["action"][0]
+        # img = Image.fromarray(rlds_batch["observation"]["image_primary"][0])
+        # lang = rlds_batch["task"]["language_instruction"].decode().lower()
+        # actions = rlds_batch["action"]
 
+        dataset_name = rlds_batch["dataset_name"]
+        lang = rlds_batch["task"]["language_instruction"].decode().lower()
+        actions = rlds_batch["action"][self.image_num - 1:]
+        # Get images as image_num images
+        images = rlds_batch["observation"]["image_primary"]
+        imgs = [Image.fromarray(img) for img in images]
+        current_action = rlds_batch["action"][self.image_num - 1]
         # Construct Chat-based Prompt =>> Input is default query + language instruction, output are the action tokens
         prompt_builder = self.prompt_builder_fn("openvla")
 
         # Get future action chunk
-        future_actions = rlds_batch["action"][1:]
+        future_actions = rlds_batch["action"][self.image_num:]
 
         if self.use_minivlm:
             self.prompt_builder_fn = QwenPromptBuilder
@@ -118,8 +126,9 @@ class RLDSBatchTransform:
         # Tensorize =>> Run Image Transform to get `pixel_values` =>> Return
         #   =>> IMPORTANT :: IF WE'RE USING HF LLM.forward(..., labels=labels), SHIFTING HAPPENS _INSIDE_ MODEL!
         input_ids, labels = torch.tensor(input_ids), torch.tensor(labels)
-        pixel_values = self.image_transform(img)
-
+        pixel_values = [self.image_transform(img) for img in imgs] # [image_num, 3, 224, 224]
+        pixel_values = torch.cat(pixel_values, dim=0) # [image_num * 3, 224, 224]
+        # print(pixel_values.shape)
         # [CRITICAL] We do not want to take the loss for anything but the predicted action tokens!
         labels[: -(action_chunk_len + 1)] = IGNORE_INDEX
         if not self.predict_stop_token:
@@ -154,6 +163,7 @@ class RLDSDataset(IterableDataset):
         shuffle_buffer_size: int = 256_000,
         train: bool = True,
         image_aug: bool = False,
+        image_num: int = 0
     ) -> None:
         """Lightweight wrapper around RLDS TFDS Pipeline for use with PyTorch/OpenVLA Data Loaders."""
         self.data_root_dir, self.data_mix, self.batch_transform = data_root_dir, data_mix, batch_transform
@@ -182,7 +192,7 @@ class RLDSDataset(IterableDataset):
         )
         rlds_config = dict(
             traj_transform_kwargs=dict(
-                window_size=1,                                      # If we wanted to feed / predict more than one step
+                window_size=image_num,                                      # If we wanted to feed / predict more than one step
                 future_action_window_size=NUM_ACTIONS_CHUNK-1,      # For action chunking
                 skip_unlabeled=True,                                # Skip trajectories without language labels
                 goal_relabeling_strategy="uniform",                 # Goals are currently unused

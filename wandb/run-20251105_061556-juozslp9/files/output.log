@@ -1,0 +1,125 @@
+Detected constants:
+	NUM_ACTIONS_CHUNK: 1
+	ACTION_DIM: 2
+	PROPRIO_DIM: 0
+	ACTION_PROPRIO_NORMALIZATION_TYPE: bounds_q99
+Created backup of original config at: /home/mmc_jhzhang/VLA-Adapter/pretrained_models/configs/config.json.back.20251105_061559
+Updated config.json at: /home/mmc_jhzhang/VLA-Adapter/pretrained_models/configs/config.json
+Changes made:
+  - Set AutoConfig to "configuration_prismatic.OpenVLAConfig"
+  - Set AutoModelForVision2Seq to "modeling_prismatic.OpenVLAForActionPrediction"
+/data/mmc_jhzhang/envs/vla-adapter/lib/python3.10/site-packages/torch/distributed/distributed_c10d.py:4807: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user.
+  warnings.warn(  # warn only once
+11/05 [06:16:00] INFO     | >> [*] Loading from local path                                                            load.py:62
+                          `pretrained_models/prism-qwen25-extra-dinosiglip-224px-0_5b`
+                 INFO     | >> [*] Found Config =>> Loading & Freezing prism-qwen25-extra-dinosiglip-224px+0_5b with: load.py:85
+                                       Vision Backbone =>> dinosiglip-vit-so-224px
+                                       LLM Backbone    =>> qwen25-0_5b-extra
+                                       Arch Specifier  =>> no-align+fused-gelu-mlp
+                                       Checkpoint Path =>>
+                          `pretrained_models/prism-qwen25-extra-dinosiglip-224px-0_5b/checkpoints/step-020792-epoch-0
+                          1-loss=0.5268.pt`
+                 INFO     | >> [*] Loading Vision Backbone dinosiglip-vit-so-224px                                   load.py:100
+11/05 [06:16:03] INFO     | >> Loading pretrained weights from Hugging Face hub                                  _builder.py:186
+                          (timm/vit_large_patch14_reg4_dinov2.lvd142m)
+11/05 [06:16:04] INFO     | >>  Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading _hub.py:180
+                          weights using safetensors.
+                 INFO     | >> Resized position embedding: (37, 37) to (16, 16).                                 pos_embed.py:55
+11/05 [06:16:08] INFO     | >> Loading pretrained weights from Hugging Face hub (('timm/ViT-SO400M-14-SigLIP',   _builder.py:186
+                          'open_clip_pytorch_model.bin'))
+11/05 [06:16:09] INFO     | >>  Safe alternative available for 'open_clip_pytorch_model.bin' (as                     _hub.py:180
+                          'open_clip_model.safetensors'). Loading weights using safetensors.
+                 INFO     | >> [*] Loading Pretrained LLM qwen25-0_5b-extra via HF Transformers                      load.py:108
+                 INFO     | >>     |=> Loading qwen2.5 LLM from `Qwen/Qwen2.5-0.5B`                              base_llm.py:121
+11/05 [06:16:10] INFO     | >>     |=> Loading qwen2.5 (Fast) Tokenizer via the AutoTokenizer API                base_llm.py:156
+Added 256 extra tokens.
+11/05 [06:16:12] INFO     | >> [*] Loading VLM prism-qwen25-extra-dinosiglip-224px+0_5b from Checkpoint              load.py:117
+trainable params: 51,954,432 || all params: 1,304,450,880 || trainable%: 3.9829
+# trainable params in action_head: 213836698
+# total trainable params: 265791130
+11/05 [06:17:09] INFO     | >> [*] Loading existing dataset statistics from                                    data_utils.py:199
+                          /home/mmc_jhzhang/tensorflow_datasets/envs_dataset/1.0.0/dataset_statistics_03340ee3
+                          0583b37f2c4fe525fb94e7ffb7606cca2043ee6053a68691030e476f.json.
+
+######################################################################################
+# Loading the following 1 datasets (incl. sampling weight):                         #
+# envs_dataset: ============================================================1.000000 #
+######################################################################################
+
+11/05 [06:17:10] INFO     | >> [*] Threads per Dataset: [1]                                                       dataset.py:528
+                 INFO     | >> [*] Reads per Dataset: [1]                                                         dataset.py:529
+                 INFO     | >> [*] Constructing datasets...                                                       dataset.py:532
+                 INFO     | >> [*] Applying frame transforms on dataset...                                        dataset.py:572
+11/05 [06:17:13] INFO     | >> [*] Saved dataset statistics file at path                                       data_utils.py:284
+                          outputs/configs+envs_dataset+b16+lr-0.0002+lora-r32+dropout-0.0--image_aug--VLA-Adap
+                          ter--track--/dataset_statistics.json
+Len of dataloader:  102166
+  0%|          | 3/200005 [01:22<1276:23:17, 22.97s/it]
+-----------------
+curr:  1.125
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+curr:  1.203125
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------
+-----------------

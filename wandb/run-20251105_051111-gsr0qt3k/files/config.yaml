@@ -1,0 +1,152 @@
+_wandb:
+    value:
+        cli_version: 0.22.0
+        e:
+            efddcsixjwjywb2ihpq7d4t8cm7awpab:
+                args:
+                    - --vlm_path
+                    - pretrained_models/prism-qwen25-extra-dinosiglip-224px-0_5b
+                    - --config_file_path
+                    - pretrained_models/configs
+                    - --data_root_dir
+                    - /home/mmc_jhzhang/tensorflow_datasets
+                    - --dataset_name
+                    - envs_dataset
+                    - --run_root_dir
+                    - outputs
+                    - --use_film
+                    - "False"
+                    - --num_images_in_input
+                    - "13"
+                    - --use_proprio
+                    - "False"
+                    - --use_lora
+                    - "True"
+                    - --use_fz
+                    - "False"
+                    - --use_minivlm
+                    - "True"
+                    - --image_aug
+                    - "True"
+                    - --num_steps_before_decay
+                    - "200000"
+                    - --max_steps
+                    - "200005"
+                    - --save_freq
+                    - "5000"
+                    - --save_latest_checkpoint_only
+                    - "False"
+                    - --merge_lora_during_training
+                    - "True"
+                    - --batch_size
+                    - "4"
+                    - --grad_accumulation_steps
+                    - "4"
+                    - --learning_rate
+                    - "2e-4"
+                    - --lora_rank
+                    - "32"
+                    - --use_pro_version
+                    - "True"
+                    - --wandb_entity
+                    - kininialini-tianjin-university
+                    - --wandb_project
+                    - vla-adapter-track-multi
+                    - --run_id_note
+                    - VLA-Adapter--track--
+                codePath: vla-scripts/finetune.py
+                codePathLocal: vla-scripts/finetune.py
+                cpu_count: 64
+                cpu_count_logical: 128
+                cudaVersion: "12.8"
+                disk:
+                    /:
+                        total: "1341564616704"
+                        used: "354185687040"
+                email: kininialini@gmail.com
+                executable: /data/mmc_jhzhang/envs/vla-adapter/bin/python3.10
+                git:
+                    commit: ec33a5c75175ed6019a62d6330a80f3d0e4bca6a
+                    remote: https://github.com/JahaoZhang/VLA-adapter_track.git
+                gpu: NVIDIA GeForce RTX 5090
+                gpu_count: 8
+                gpu_nvidia:
+                    - architecture: Blackwell
+                      cudaCores: 21760
+                      memoryTotal: "34190917632"
+                      name: NVIDIA GeForce RTX 5090
+                      uuid: GPU-2e5d181d-c5d0-b2a5-dc91-b82c167338a9
+                    - architecture: Blackwell
+                      cudaCores: 21760
+                      memoryTotal: "34190917632"
+                      name: NVIDIA GeForce RTX 5090
+                      uuid: GPU-1bb011b5-67a5-c73f-7aab-24612f8af9cb
+                    - architecture: Blackwell
+                      cudaCores: 21760
+                      memoryTotal: "34190917632"
+                      name: NVIDIA GeForce RTX 5090
+                      uuid: GPU-e65fe0c3-8060-2ba5-7e3f-9b36ac6205ba
+                    - architecture: Blackwell
+                      cudaCores: 21760
+                      memoryTotal: "34190917632"
+                      name: NVIDIA GeForce RTX 5090
+                      uuid: GPU-b317dc17-9db9-fcb4-07a3-a22d629d8ccd
+                    - architecture: Blackwell
+                      cudaCores: 21760
+                      memoryTotal: "34190917632"
+                      name: NVIDIA GeForce RTX 5090
+                      uuid: GPU-e7a04b2a-34ff-f749-01a7-956aff23453b
+                    - architecture: Blackwell
+                      cudaCores: 21760
+                      memoryTotal: "34190917632"
+                      name: NVIDIA GeForce RTX 5090
+                      uuid: GPU-d66bbe3d-4c43-b74c-ee91-cbe03377165e
+                    - architecture: Blackwell
+                      cudaCores: 21760
+                      memoryTotal: "34190917632"
+                      name: NVIDIA GeForce RTX 5090
+                      uuid: GPU-aaad8106-de1a-2f87-06e8-1ac8be8a5e6b
+                    - architecture: Blackwell
+                      cudaCores: 21760
+                      memoryTotal: "34190917632"
+                      name: NVIDIA GeForce RTX 5090
+                      uuid: GPU-3b878e23-4c17-5b65-a16c-95d408be6a1b
+                host: hr-5090-132-18
+                memory:
+                    total: "540656193536"
+                os: Linux-5.15.0-160-generic-x86_64-with-glibc2.35
+                program: /home/mmc_jhzhang/VLA-Adapter/vla-scripts/finetune.py
+                python: CPython 3.10.16
+                root: /home/mmc_jhzhang/VLA-Adapter
+                startedAt: "2025-11-05T05:11:11.425757Z"
+                writerId: efddcsixjwjywb2ihpq7d4t8cm7awpab
+        m: []
+        python_version: 3.10.16
+        t:
+            "1":
+                - 2
+                - 1
+                - 3
+                - 11
+                - 41
+                - 49
+                - 63
+                - 71
+                - 98
+            "2":
+                - 2
+                - 1
+                - 3
+                - 11
+                - 41
+                - 49
+                - 63
+                - 71
+                - 98
+            "3":
+                - 13
+            "4": 3.10.16
+            "5": 0.22.0
+            "6": 4.40.1
+            "12": 0.22.0
+            "13": linux-x86_64

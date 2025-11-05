@@ -330,7 +330,6 @@ def run_forward_pass(
     # Get ground-truth action labels
     ground_truth_actions = batch["actions"].to(device_id).to(torch.bfloat16)
     noise, noisy_actions, diffusion_timestep_embeddings = None, None, None
-
     # VLA forward pass
     with torch.autocast("cuda", dtype=torch.bfloat16):
         output: CausalLMOutputWithPast = vla(
@@ -897,7 +896,8 @@ def finetune(cfg: FinetuneConfig) -> None:
         )
 
     # Get number of vision patches
-    NUM_PATCHES = vla.module.vision_backbone.get_num_patches() * vla.module.vision_backbone.get_num_images_in_input()
+    # NUM_PATCHES = vla.module.vision_backbone.get_num_patches() * vla.module.vision_backbone.get_num_images_in_input()
+    NUM_PATCHES = 256
     # If we have proprio inputs, a single proprio embedding is appended to the end of the vision patch embeddings
 
     # Instantiate optimizer
@@ -947,8 +947,8 @@ def finetune(cfg: FinetuneConfig) -> None:
     # ---
 
     # We assume that the model takes as input one third-person camera image and 1 or 2 optional wrist camera image(s)
-    use_wrist_image = cfg.num_images_in_input > 1
-
+    # use_wrist_image = cfg.num_images_in_input > 1
+    use_wrist_image = 0
     # Create training and optional validation datasets
     batch_transform = RLDSBatchTransform(
         action_tokenizer,
@@ -957,7 +957,8 @@ def finetune(cfg: FinetuneConfig) -> None:
         prompt_builder_fn=PurePromptBuilder,
         use_wrist_image=use_wrist_image,
         use_proprio=cfg.use_proprio,
-        use_minivlm=cfg.use_minivlm
+        use_minivlm=cfg.use_minivlm,
+        image_num=cfg.num_images_in_input
         )
     train_dataset = RLDSDataset(
         cfg.data_root_dir,
@@ -966,6 +967,7 @@ def finetune(cfg: FinetuneConfig) -> None:
         resize_resolution=tuple(vla.module.config.image_sizes),
         shuffle_buffer_size=cfg.shuffle_buffer_size,
         image_aug=cfg.image_aug,
+        image_num=cfg.num_images_in_input
     )
     if cfg.use_val_set:
         val_dataset = RLDSDataset(

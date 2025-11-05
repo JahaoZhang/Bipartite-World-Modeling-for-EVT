@@ -221,18 +221,38 @@ class PrismaticVisionBackbone(nn.Module):
 
             # Process each image and collect patches
             all_patches = []
-            for img in images:
+            def process_grid(vis_embed, grid_size):
+                cur_shape = int(vis_embed.shape[1] ** 0.5)
+                assert grid_size > 1, f'Grid size should be larger than 1, but got {grid_size}'
+                vis_embed = vis_embed.reshape(vis_embed.shape[0], cur_shape, cur_shape, -1)
+                
+                grid_stride = cur_shape // grid_size
+                vis_embed = nn.functional.avg_pool2d(vis_embed.permute(0, 3, 1, 2),
+                                        padding=0,
+                                        kernel_size=grid_stride,
+                                        stride=grid_stride)
+                return vis_embed.permute(0, 2, 3, 1).flatten(1, 2)
+            for i, img in enumerate(images):
                 # Split each image further into two stacks of channels (each with 3 channels)
                 img_regular, img_fused = torch.split(img, [3, 3], dim=1)
 
                 # Get patches from both SigLIP and DINOv2 vision transformers
+                
                 patches = self.featurizer(img_regular)
                 patches_fused = self.fused_featurizer(img_fused)
-
+                ##########
+                # 添加不同历史 images 处理的逻辑
+                if i == len(images) - 1:
+                    patches = process_grid(patches, 8)
+                    patches_fused = process_grid(patches_fused, 8)
+                else:
+                    patches = process_grid(patches, 4)
+                    patches_fused = process_grid(patches_fused, 4)
+                ##########
                 # Concatenate SigLIP and DINOv2 patches along the hidden dimension
                 combined_patches = torch.cat([patches, patches_fused], dim=2)
                 all_patches.append(combined_patches)
-
+            
             # Concatenate all patches along the patch dimension
             return torch.cat(all_patches, dim=1)
 
@@ -464,7 +484,8 @@ class PrismaticForConditionalGeneration(PrismaticPreTrainedModel):
         """Process vision features with optional FiLM conditioning"""
         if use_film:
             # FiLM: Infuse language inputs into visual features
-            patch_features = self.vision_backbone(pixel_values, language_embeddings)  # (bsz, 256 * num_images, D)
+            with torch.no_grad():
+                patch_features = self.vision_backbone(pixel_values, language_embeddings)  # (bsz, 256 * num_images, D)
         else:
             patch_features = self.vision_backbone(pixel_values)  # (bsz, 256 * num_images, D)
 
@@ -612,6 +633,7 @@ class PrismaticForConditionalGeneration(PrismaticPreTrainedModel):
             )  # (B, lang_seq_len, llm_dim)
 
             # Get visual features
+            # print(pixel_values.shape)
             projected_patch_embeddings = self._process_vision_features(pixel_values, language_embeddings, use_film)
 
             # Process action embeddings
