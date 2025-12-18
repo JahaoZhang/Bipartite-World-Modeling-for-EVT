@@ -237,17 +237,20 @@ class PrismaticVisionBackbone(nn.Module):
                 img_regular, img_fused = torch.split(img, [3, 3], dim=1)
 
                 # Get patches from both SigLIP and DINOv2 vision transformers
-                
-                patches = self.featurizer(img_regular)
-                patches_fused = self.fused_featurizer(img_fused)
+                with torch.no_grad():
+                    patches = self.featurizer(img_regular)
+                    patches_fused = self.fused_featurizer(img_fused)
                 ##########
                 # 添加不同历史 images 处理的逻辑
                 if i == len(images) - 1:
                     patches = process_grid(patches, 8)
                     patches_fused = process_grid(patches_fused, 8)
-                else:
+                elif i < len(images) - 1 and i >= 20:
                     patches = process_grid(patches, 4)
                     patches_fused = process_grid(patches_fused, 4)
+                else:
+                    patches = process_grid(patches, 2)
+                    patches_fused = process_grid(patches_fused, 2)
                 ##########
                 # Concatenate SigLIP and DINOv2 patches along the hidden dimension
                 combined_patches = torch.cat([patches, patches_fused], dim=2)

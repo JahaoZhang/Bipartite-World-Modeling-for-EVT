@@ -876,9 +876,17 @@ def aloha_dataset_transform(trajectory: Dict[str, Any]) -> Dict[str, Any]:
 def envs_dataset_transform(sample):
     return sample
 
+def hm3dpath_dataset_transform(sample):
+    return sample
+
+def hm3dpathpad_dataset_transform(sample):
+    return sample
+
 # === Registry ===
 OXE_STANDARDIZATION_TRANSFORMS = {
     "envs_dataset": envs_dataset_transform,
+    "hm3dpath_dataset": hm3dpath_dataset_transform,
+    "hm3dpathpad_dataset": hm3dpathpad_dataset_transform,
     "bridge_oxe": bridge_oxe_dataset_transform,
     "bridge_orig": bridge_orig_dataset_transform,
     "bridge_dataset": bridge_orig_dataset_transform,

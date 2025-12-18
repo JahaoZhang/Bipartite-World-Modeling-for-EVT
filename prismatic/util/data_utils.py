@@ -154,6 +154,8 @@ class PaddedCollatorForActionPrediction:
         # Stack all actions
         actions = [torch.from_numpy(np.copy(instance["actions"])) for instance in instances]
         actions = torch.stack(actions)
+        path_points = [torch.from_numpy(np.copy(instance["path_points"])) for instance in instances]
+        path_points = torch.stack(path_points)
 
         # Stack proprio
         if "proprio" in instances[0]:
@@ -169,6 +171,7 @@ class PaddedCollatorForActionPrediction:
             attention_mask=attention_mask,
             labels=labels,
             actions=actions,
+            path_points=path_points,
         )
         if dataset_names is not None:
             output["dataset_names"] = dataset_names

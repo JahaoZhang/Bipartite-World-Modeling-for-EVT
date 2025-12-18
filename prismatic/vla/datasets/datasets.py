@@ -51,6 +51,8 @@ class RLDSBatchTransform:
         actions = rlds_batch["action"][self.image_num - 1:]
         # Get images as image_num images
         images = rlds_batch["observation"]["image_primary"]
+        path_points = rlds_batch["path_points"][self.image_num - 1:]
+        # print("path_points.shape: ", path_points.shape)
         imgs = [Image.fromarray(img) for img in images]
         current_action = rlds_batch["action"][self.image_num - 1]
         # Construct Chat-based Prompt =>> Input is default query + language instruction, output are the action tokens
@@ -134,7 +136,7 @@ class RLDSBatchTransform:
         if not self.predict_stop_token:
             labels[-1] = IGNORE_INDEX
 
-        return_dict = dict(pixel_values=pixel_values, input_ids=input_ids, labels=labels, dataset_name=dataset_name, actions=actions)
+        return_dict = dict(pixel_values=pixel_values, input_ids=input_ids, labels=labels, dataset_name=dataset_name, actions=actions, path_points=path_points)
 
         # Add additional inputs
         if self.use_wrist_image:

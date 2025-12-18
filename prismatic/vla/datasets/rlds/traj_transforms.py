@@ -45,6 +45,7 @@ def chunk_act_obs(traj: Dict, window_size: int, future_action_window_size: int =
 
     traj["observation"] = tf.nest.map_structure(lambda x: tf.gather(x, floored_chunk_indices), traj["observation"])
     traj["action"] = tf.gather(traj["action"], floored_action_chunk_indices)
+    traj["path_points"] = tf.gather(traj["path_points"], floored_action_chunk_indices)
 
     # indicates whether an entire observation is padding
     traj["observation"]["pad_mask"] = chunk_indices >= 0

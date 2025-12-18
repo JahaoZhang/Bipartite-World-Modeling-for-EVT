@@ -72,10 +72,10 @@ class FinetuneConfig:
     resum_vla_path: str = "/home/mmc_jhzhang/openvla/openvla-7b"       # Path to OpenVLA model (on HuggingFace Hub or stored locally)
 
     # Dataset
-    data_root_dir: Path = Path("/home/mmc_jhzhang/tensorflow_datasets/envs_dataset")      # Directory containing RLDS datasets
-    dataset_name: str = "envs_dataset"    # Name of fine-tuning dataset (e.g., `aloha_scoop_x_into_bowl`)
+    data_root_dir: Path = Path("/home/mmc_jhzhang/tensorflow_datasets/hm3dpath_dataset")      # Directory containing RLDS datasets
+    dataset_name: str = "hm3dpath_dataset"    # Name of fine-tuning dataset (e.g., `aloha_scoop_x_into_bowl`)
     run_root_dir: Path = Path("outputs")                # Path to directory to store logs & checkpoints
-    shuffle_buffer_size: int = 100_000               # Dataloader shuffle buffer size (can reduce if OOM errors occur)
+    shuffle_buffer_size: int = 30_000               # Dataloader shuffle buffer size (can reduce if OOM errors occur)
 
     # Algorithm and architecture
     use_l1_regression: bool = True                   # If True, trains continuous action head with L1 regression objective
@@ -329,6 +329,10 @@ def run_forward_pass(
 
     # Get ground-truth action labels
     ground_truth_actions = batch["actions"].to(device_id).to(torch.bfloat16)
+    batch_size = batch["input_ids"].shape[0]
+    ground_truth_path_points = batch["path_points"].to(device_id).to(torch.bfloat16)
+    ground_truth_path_points = ground_truth_path_points.reshape(batch_size, 1, 16)
+    # print("ground_truth_path_points.shape: ", ground_truth_path_points.shape)
     noise, noisy_actions, diffusion_timestep_embeddings = None, None, None
     # VLA forward pass
     with torch.autocast("cuda", dtype=torch.bfloat16):
@@ -414,7 +418,7 @@ def run_forward_pass(
             phase=cfg.phase,
             )
 
-        loss = torch.nn.L1Loss()(predicted_actions, ground_truth_actions)
+        loss = torch.nn.L1Loss()(predicted_actions, ground_truth_path_points)
 
         metrics.update(
             {
@@ -425,9 +429,9 @@ def run_forward_pass(
         # Get detailed L1 losses for logging
         should_log_l1_loss = use_l1_regression
         if should_log_l1_loss:
-            ground_truth_curr_action = ground_truth_actions[:, 0]
+            ground_truth_curr_action = ground_truth_path_points[:, 0]
             predicted_curr_action = predicted_actions[:, 0]
-            ground_truth_next_actions = ground_truth_actions[:, 1:]
+            ground_truth_next_actions = ground_truth_path_points[:, 1:]
             predicted_next_actions = predicted_actions[:, 1:]
             curr_action_l1_loss = torch.nn.L1Loss()(ground_truth_curr_action, predicted_curr_action)
             next_actions_l1_loss = torch.nn.L1Loss()(ground_truth_next_actions, predicted_next_actions)
@@ -889,7 +893,7 @@ def finetune(cfg: FinetuneConfig) -> None:
         {
             "input_dim": vla.module.llm_dim, 
             "hidden_dim": vla.module.llm_dim, 
-            "action_dim": ACTION_DIM,
+            "action_dim": 16,
             "use_pro_version": cfg.use_pro_version,
             },
         to_bf16=True,
