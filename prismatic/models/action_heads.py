@@ -25,7 +25,7 @@ class L1RegressionActionHead(nn.Module):
         input_dim=4096,
         hidden_dim=4096,
         action_dim=7,
-        num_task_tokens=512,
+        num_task_tokens=256,
         use_pro_version=False,
     ):
         super().__init__()

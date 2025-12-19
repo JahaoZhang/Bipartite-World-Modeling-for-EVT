@@ -47,3 +47,16 @@ class NoisyActionProjector(nn.Module):
         projected_features = self.act_fn1(projected_features)
         projected_features = self.fc2(projected_features)
         return projected_features
+
+class TrajMLP(nn.Module):
+    def __init__(self, in_dim=2, hidden_dim=448, out_dim=896):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(in_dim, hidden_dim),
+            nn.GELU(),
+            nn.Linear(hidden_dim, out_dim)
+        )
+
+    def forward(self, x):
+        # x: (B, K, in_dim)
+        return self.net(x)

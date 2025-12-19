@@ -38,7 +38,7 @@ from prismatic.extern.hf.processing_prismatic import PrismaticImageProcessor, Pr
 from prismatic.models.action_heads import L1RegressionActionHead
 from prismatic.models.backbones.llm.prompting import PurePromptBuilder
 from prismatic.models.film_vit_wrapper import FiLMedPrismaticVisionBackbone
-from prismatic.models.projectors import ProprioProjector
+from prismatic.models.projectors import ProprioProjector, TrajMLP
 from prismatic.training.train_utils import (
     compute_actions_l1_loss,
     compute_token_accuracy,
@@ -288,6 +288,8 @@ def init_module(
 def run_forward_pass(
     vla,
     action_head,
+    path_point_head,
+    path_point_token_MLP,
     proprio_projector,
     batch,
     action_tokenizer,
@@ -298,7 +300,8 @@ def run_forward_pass(
     num_patches,
     compute_diffusion_l1=False,
     use_pro_version=True,
-    cfg=None
+    cfg=None,
+    log_step=None,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
     """
     Compute model forward pass and metrics for both training and validation.
@@ -306,6 +309,8 @@ def run_forward_pass(
     Args:
         vla (OpenVLAForActionPrediction): Vision-language-action policy.
         action_head (nn.Module): Action head module.
+        path_point_head (nn.Module): Path point head module.
+        path_point_token_MLP (nn.Module): Path point token MLP module.
         noisy_action_projector (nn.Module): Noisy action projector module (only used for diffusion).
         proprio_projector (nn.Module): Proprioceptive state projector module.
         batch (dict): Input batch.
@@ -319,7 +324,7 @@ def run_forward_pass(
         compute_diffusion_l1 (bool): Whether to sample actions and compute L1 loss for diffusion (do this once every
                                     diffusion_sample_freq steps during training; do it every batch for validation)
         num_diffusion_steps (int): Number of diffusion steps (only used for diffusion).
-
+        log_step (int): Log step.
     Returns:
         tuple: (loss, metrics_dict)
             loss: The loss tensor with gradient for backpropagation.
@@ -396,7 +401,8 @@ def run_forward_pass(
     # Compute metrics for continuous action representations (L1 regression)
     else:
         # Get last layer hidden states
-        multi_layer_hidden_states = []
+        multi_layer_path_point_hidden_states = []
+        multi_layer_action_hidden_states = []
         
         for item in output.hidden_states[0:]:
             # last_hidden_states = output.hidden_states[-1]  # (B, seq_len, D)
@@ -405,24 +411,33 @@ def run_forward_pass(
             # Get hidden states for action portion of response
             batch_size = batch["input_ids"].shape[0]
             # actions_hidden_states = text_hidden_states[:, -1, :].reshape(batch_size, 1, -1).to(torch.bfloat16)
-            actions_hidden_states = text_hidden_states[current_action_mask | next_actions_mask].reshape(batch_size, 1,NUM_TOKENS, -1).to(torch.bfloat16)
-            task_latten_states = item[:, :num_patches].reshape(batch_size, 1, num_patches , -1)
-            all_hidden_states = torch.cat((task_latten_states, actions_hidden_states),2)
-            multi_layer_hidden_states.append(all_hidden_states)
-        multi_layer_hidden_states = torch.cat(multi_layer_hidden_states, dim = 1)
+            query_hidden_states = text_hidden_states[current_action_mask | next_actions_mask].reshape(batch_size, 1,NUM_TOKENS, -1).to(torch.bfloat16)
+            path_point_hidden_states = query_hidden_states[:, :, :NUM_TOKENS // 2]
+            actions_hidden_states = query_hidden_states[:, :, NUM_TOKENS // 2:]
 
-        predicted_actions = action_head.module.predict_action(
-            multi_layer_hidden_states,
+            task_latten_states = item[:, :num_patches].reshape(batch_size, 1, num_patches , -1)
+
+            for_path_point_hidden_states = torch.cat((task_latten_states, path_point_hidden_states),2)
+            for_action_hidden_states = torch.cat((task_latten_states, actions_hidden_states),2)
+            multi_layer_path_point_hidden_states.append(for_path_point_hidden_states)
+            multi_layer_action_hidden_states.append(for_action_hidden_states)
+
+        multi_layer_path_point_hidden_states = torch.cat(multi_layer_path_point_hidden_states, dim = 1)
+        # multi_layer_action_hidden_states = torch.cat(multi_layer_action_hidden_states, dim = 1)
+
+
+        predicted_path_points = path_point_head.module.predict_action(
+            multi_layer_path_point_hidden_states,
             proprio=batch["proprio"] if use_proprio else None,
             proprio_projector=proprio_projector if use_proprio else None,
             phase=cfg.phase,
             )
 
-        loss = torch.nn.L1Loss()(predicted_actions, ground_truth_path_points)
+        path_point_loss = torch.nn.L1Loss()(predicted_path_points, ground_truth_path_points)
 
         metrics.update(
             {
-                "loss_value": loss.item(),  # Detached value for logging
+                "path_point_loss": path_point_loss.item(),  # Detached value for logging
             }
         )
 
@@ -430,9 +445,9 @@ def run_forward_pass(
         should_log_l1_loss = use_l1_regression
         if should_log_l1_loss:
             ground_truth_curr_action = ground_truth_path_points[:, 0]
-            predicted_curr_action = predicted_actions[:, 0]
+            predicted_curr_action = predicted_path_points[:, 0]
             ground_truth_next_actions = ground_truth_path_points[:, 1:]
-            predicted_next_actions = predicted_actions[:, 1:]
+            predicted_next_actions = predicted_path_points[:, 1:]
             curr_action_l1_loss = torch.nn.L1Loss()(ground_truth_curr_action, predicted_curr_action)
             next_actions_l1_loss = torch.nn.L1Loss()(ground_truth_next_actions, predicted_next_actions)
             if compute_diffusion_l1:
@@ -445,6 +460,40 @@ def run_forward_pass(
                     "next_actions_l1_loss": next_actions_l1_loss.item(),
                 }
             )
+        predicted_path_points = predicted_path_points.detach().reshape(batch_size, 8, 2)
+        # print(predicted_path_points.shape)
+        path_point_token_embeddings = path_point_token_MLP.module(predicted_path_points).unsqueeze(1)
+        # print(path_point_token_embeddings.shape)
+        warmup_steps = 1_000
+        max_scale = 0.8
+        alpha = min(log_step / warmup_steps, 1.0) * max_scale
+
+        for i in range(len(multi_layer_action_hidden_states)):
+            # print(multi_layer_action_hidden_states[i].shape)
+            multi_layer_action_hidden_states[i] = torch.cat((multi_layer_action_hidden_states[i], path_point_token_embeddings*alpha), 2)
+            # print(multi_layer_action_hidden_states[i].shape)
+        multi_layer_action_hidden_states = torch.cat(multi_layer_action_hidden_states, dim = 1)
+
+        predicted_actions = action_head.module.predict_action(
+            multi_layer_action_hidden_states,
+            proprio=batch["proprio"] if use_proprio else None,
+            proprio_projector=proprio_projector if use_proprio else None,
+            phase=cfg.phase,
+            )
+        action_loss = torch.nn.L1Loss()(predicted_actions, ground_truth_actions)
+        loss = path_point_loss + action_loss
+        metrics.update(
+            {
+                "action_loss": action_loss.item(),  # Detached value for logging
+            }
+        )
+
+        metrics.update(
+            {
+                "loss_value": loss.item(),  # Detached value for logging
+            }
+        )
+
 
     # Return both the loss tensor (with gradients) and the metrics dictionary (with detached values)
     return loss, metrics
@@ -503,6 +552,8 @@ def save_training_checkpoint(
     proprio_projector,
     noisy_action_projector,
     action_head,
+    path_point_head,
+    path_point_token_MLP,
     train_dataset,
     distributed_state,
     new_state_dict,
@@ -520,6 +571,8 @@ def save_training_checkpoint(
         proprio_projector (nn.Module): Proprioceptive state projector module.
         noisy_action_projector (nn.Module): Noisy action projector module (only used for diffusion).
         action_head (nn.Module): Action head module.
+        path_point_head (nn.Module): Path point head module.
+        path_point_token_MLP (nn.Module): Path point token MLP module.
         train_dataset (RLDSDataset): Training dataset.
         distributed_state (PartialState): Distributed training state.
 
@@ -567,6 +620,8 @@ def save_training_checkpoint(
 
         if cfg.use_l1_regression and action_head is not None:
             torch.save(action_head.state_dict(), checkpoint_dir / f"action_head--{checkpoint_name_suffix}")
+            torch.save(path_point_head.state_dict(), checkpoint_dir / f"path_point_head--{checkpoint_name_suffix}")
+            torch.save(path_point_token_MLP.state_dict(), checkpoint_dir / f"path_point_token_MLP--{checkpoint_name_suffix}")
 
         if cfg.use_film:
             # To be safe, just save the entire vision backbone (not just FiLM components)
@@ -893,8 +948,35 @@ def finetune(cfg: FinetuneConfig) -> None:
         {
             "input_dim": vla.module.llm_dim, 
             "hidden_dim": vla.module.llm_dim, 
+            "action_dim": ACTION_DIM,
+            "use_pro_version": cfg.use_pro_version,
+            },
+        to_bf16=True,
+        )
+
+        path_point_head = init_module(
+        L1RegressionActionHead,
+        "path_point_head",
+        cfg,
+        device_id,
+        {
+            "input_dim": vla.module.llm_dim, 
+            "hidden_dim": vla.module.llm_dim, 
             "action_dim": 16,
             "use_pro_version": cfg.use_pro_version,
+            },
+        to_bf16=True,
+        )
+
+        path_point_token_MLP = init_module(
+        TrajMLP,
+        "path_point_token_MLP",
+        cfg,
+        device_id,
+        {
+            "in_dim": 2, 
+            "hidden_dim": vla.module.llm_dim // 2, 
+            "out_dim": vla.module.llm_dim,
             },
         to_bf16=True,
         )
@@ -908,7 +990,8 @@ def finetune(cfg: FinetuneConfig) -> None:
     trainable_params = [param for param in vla.parameters() if param.requires_grad]
     if cfg.use_l1_regression:
         trainable_params += [param for param in action_head.parameters() if param.requires_grad]
-
+        trainable_params += [param for param in path_point_head.parameters() if param.requires_grad]
+        trainable_params += [param for param in path_point_token_MLP.parameters() if param.requires_grad]
     if cfg.use_proprio:
         trainable_params += [param for param in proprio_projector.parameters() if param.requires_grad]
     print(f"# total trainable params: {sum(p.numel() for p in trainable_params)}")
@@ -1017,6 +1100,8 @@ def finetune(cfg: FinetuneConfig) -> None:
         "curr_action_l1_loss": deque(maxlen=cfg.grad_accumulation_steps),
         "next_actions_accuracy": deque(maxlen=cfg.grad_accumulation_steps),
         "next_actions_l1_loss": deque(maxlen=cfg.grad_accumulation_steps),
+        "path_point_loss": deque(maxlen=cfg.grad_accumulation_steps),
+        "action_loss": deque(maxlen=cfg.grad_accumulation_steps),
     }
 
     # Start training
@@ -1024,11 +1109,17 @@ def finetune(cfg: FinetuneConfig) -> None:
         vla.train()
         optimizer.zero_grad()
         for batch_idx, batch in enumerate(dataloader):
+            # Compute gradient step index
+            gradient_step_idx = batch_idx // cfg.grad_accumulation_steps
+            # Push Metrics to W&B (every wandb_log_freq gradient steps)
+            log_step = gradient_step_idx if not cfg.resume else cfg.resume_step + gradient_step_idx
             # Compute training metrics and loss
             compute_diffusion_l1 = (cfg.use_l1_regression and batch_idx % cfg.diffusion_sample_freq == 0) or (cfg.use_diffusion and batch_idx % cfg.diffusion_sample_freq == 0)
             loss, metrics = run_forward_pass(
                 vla=vla,
                 action_head=action_head,
+                path_point_head=path_point_head,
+                path_point_token_MLP=path_point_token_MLP,
                 proprio_projector=proprio_projector if cfg.use_proprio else None,
                 batch=batch,
                 action_tokenizer=action_tokenizer,
@@ -1040,6 +1131,7 @@ def finetune(cfg: FinetuneConfig) -> None:
                 compute_diffusion_l1=compute_diffusion_l1,
                 use_pro_version=cfg.use_pro_version,
                 cfg=cfg,
+                log_step=log_step,
             )
 
             # Normalize loss to account for gradient accumulation
@@ -1099,6 +1191,8 @@ def finetune(cfg: FinetuneConfig) -> None:
                     proprio_projector=proprio_projector if cfg.use_proprio else None,
                     noisy_action_projector=None,
                     action_head=action_head,
+                    path_point_head=path_point_head,
+                    path_point_token_MLP=path_point_token_MLP,
                     train_dataset=train_dataset,
                     distributed_state=distributed_state,
                     new_state_dict=RAW_STATE_DICT,
@@ -1109,6 +1203,7 @@ def finetune(cfg: FinetuneConfig) -> None:
                 run_validation(
                     vla=vla,
                     action_head=action_head,
+                    path_point_head=path_point_head,
                     noisy_action_projector=None,
                     proprio_projector=proprio_projector if cfg.use_proprio else None,
                     val_dataloader=val_dataloader,
