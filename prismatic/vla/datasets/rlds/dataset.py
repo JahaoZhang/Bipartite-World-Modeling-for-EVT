@@ -185,6 +185,7 @@ def make_dataset_from_rlds(
             "action": tf.cast(traj["action"], tf.float32),
             "dataset_name": tf.repeat(name, traj_len),
             "path_points": tf.cast(traj["path_points"], tf.float32),
+            "position": tf.cast(traj["position"], tf.float32),
         }
 
         if absolute_action_mask is not None:

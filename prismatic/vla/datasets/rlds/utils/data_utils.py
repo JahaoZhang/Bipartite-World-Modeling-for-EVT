@@ -51,7 +51,12 @@ def to_padding(tensor: tf.Tensor) -> tf.Tensor:
 # ruff: noqa: B023
 def normalize_action_and_proprio(traj: Dict, metadata: Dict, normalization_type: NormalizationType):
     """Normalizes the action and proprio fields of a trajectory using the given metadata."""
-    keys_to_normalize = {"action": "action", "proprio": "observation/proprio", "path_points": "path_points"}
+    keys_to_normalize = {
+        "action": "action", 
+        "proprio": "observation/proprio", 
+        "path_points": "path_points", 
+        "position": "position", 
+    }
 
     if normalization_type == NormalizationType.NORMAL:
         for key, traj_key in keys_to_normalize.items():
@@ -214,6 +219,7 @@ def get_dataset_statistics(
                 traj["observation"]["proprio"] if "proprio" in traj["observation"] else tf.zeros_like(traj["action"])
             ),
             "path_points": traj["path_points"],
+            "position": traj["position"],
         }
     )
 
@@ -222,15 +228,16 @@ def get_dataset_statistics(
         raise ValueError("Cannot compute dataset statistics for infinite datasets.")
 
     overwatch.info("Computing dataset statistics. This may take a bit, but should only need to happen once.")
-    actions, proprios, path_points, num_transitions, num_trajectories = [], [], [], 0, 0
+    actions, proprios, path_points, position, path_points_list, position_list, num_transitions, num_trajectories = [], [], [], [], [], [], 0, 0
     for traj in tqdm(dataset.iterator(), total=cardinality if cardinality != tf.data.UNKNOWN_CARDINALITY else None):
         actions.append(traj["action"])
         proprios.append(traj["proprio"])
         path_points.append(traj["path_points"])
+        position.append(traj["position"])
         num_transitions += traj["action"].shape[0]
         num_trajectories += 1
 
-    actions, proprios, path_points = np.concatenate(actions), np.concatenate(proprios), np.concatenate(path_points)
+    actions, proprios, path_points, position = np.concatenate(actions), np.concatenate(proprios), np.concatenate(path_points), np.concatenate(position)
     metadata = {
         "action": {
             "mean": actions.mean(0).tolist(),
@@ -255,6 +262,14 @@ def get_dataset_statistics(
             "min": path_points.min(0).tolist(),
             "q01": np.quantile(path_points, 0.01, axis=0).tolist(),
             "q99": np.quantile(path_points, 0.99, axis=0).tolist(),
+        },
+        "position": {
+            "mean": position.mean(0).tolist(),
+            "std": position.std(0).tolist(),
+            "max": position.max(0).tolist(),
+            "min": position.min(0).tolist(),
+            "q01": np.quantile(position, 0.01, axis=0).tolist(),
+            "q99": np.quantile(position, 0.99, axis=0).tolist(),
         },
         "num_transitions": num_transitions,
         "num_trajectories": num_trajectories,

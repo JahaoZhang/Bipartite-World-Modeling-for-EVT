@@ -12,7 +12,7 @@ IGNORE_INDEX = -100
 # ACTION_TOKEN_BEGIN_IDX = 31743
 ACTION_TOKEN_BEGIN_IDX  = 151386
 STOP_INDEX = 2  # '</s>'
-NUM_TOKENS = 64
+NUM_TOKENS = 96
 
 
 # Defines supported normalization schemes for action and proprioceptive state.

@@ -48,10 +48,13 @@ class RLDSBatchTransform:
 
         dataset_name = rlds_batch["dataset_name"]
         lang = rlds_batch["task"]["language_instruction"].decode().lower()
-        actions = rlds_batch["action"][self.image_num - 1:]
+        actions = rlds_batch["action"][self.image_num - 1]
         # Get images as image_num images
         images = rlds_batch["observation"]["image_primary"]
-        path_points = rlds_batch["path_points"][self.image_num - 1:]
+        path_points = rlds_batch["path_points"][self.image_num - 1]
+        position = rlds_batch["position"][self.image_num]
+        path_points_list = rlds_batch["path_points"]
+        position_list = rlds_batch["position"]
         # print("path_points.shape: ", path_points.shape)
         imgs = [Image.fromarray(img) for img in images]
         current_action = rlds_batch["action"][self.image_num - 1]
@@ -136,7 +139,17 @@ class RLDSBatchTransform:
         if not self.predict_stop_token:
             labels[-1] = IGNORE_INDEX
 
-        return_dict = dict(pixel_values=pixel_values, input_ids=input_ids, labels=labels, dataset_name=dataset_name, actions=actions, path_points=path_points)
+        return_dict = dict(
+            pixel_values=pixel_values, 
+            input_ids=input_ids, 
+            labels=labels, 
+            dataset_name=dataset_name, 
+            actions=actions, 
+            path_points=path_points, 
+            path_points_list=path_points_list, 
+            position_list=position_list,
+            position=position
+        )
 
         # Add additional inputs
         if self.use_wrist_image:
@@ -194,7 +207,7 @@ class RLDSDataset(IterableDataset):
         )
         rlds_config = dict(
             traj_transform_kwargs=dict(
-                window_size=image_num,                                      # If we wanted to feed / predict more than one step
+                window_size=image_num+1,                                      # If we wanted to feed / predict more than one step
                 future_action_window_size=NUM_ACTIONS_CHUNK-1,      # For action chunking
                 skip_unlabeled=True,                                # Skip trajectories without language labels
                 goal_relabeling_strategy="uniform",                 # Goals are currently unused

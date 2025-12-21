@@ -193,7 +193,7 @@ class PrismaticVisionBackbone(nn.Module):
         self.num_images_in_input = num_images_in_input
 
 
-    def forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
+    def forward(self, pixel_values: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Implements the forward pass for the vision backbone.
 
@@ -217,7 +217,9 @@ class PrismaticVisionBackbone(nn.Module):
             assert self.use_fused_vision_backbone, "Multi-image inputs require using fused backbone!"
 
             # Split `pixel_values` into individual images (each with 6 channels: 3 for SigLIP + 3 for DINOv2)
-            images = torch.split(pixel_values, [6] * self.num_images_in_input, dim=1)
+            images = torch.split(pixel_values, [6] * (self.num_images_in_input + 1), dim=1)
+            next_image = images[-1]
+            images = images[:-1]
 
             # Process each image and collect patches
             all_patches = []
@@ -255,9 +257,14 @@ class PrismaticVisionBackbone(nn.Module):
                 # Concatenate SigLIP and DINOv2 patches along the hidden dimension
                 combined_patches = torch.cat([patches, patches_fused], dim=2)
                 all_patches.append(combined_patches)
-            
+
+            img_regular, img_fused = torch.split(next_image, [3, 3], dim=1)
+            with torch.no_grad():
+                new_image_patches = self.featurizer(img_regular)
+                new_image_patches_fused = self.fused_featurizer(img_fused)
+            new_image_patches = torch.cat([new_image_patches, new_image_patches_fused], dim=2)
             # Concatenate all patches along the patch dimension
-            return torch.cat(all_patches, dim=1)
+            return torch.cat(all_patches, dim=1), new_image_patches
 
 
 
@@ -307,7 +314,7 @@ class PrismaticCausalLMOutputWithPast(ModelOutput):
     past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
     hidden_states: Optional[Tuple[torch.FloatTensor, ...]] = None
     attentions: Optional[Tuple[torch.FloatTensor]] = None
-
+    new_image_patches: Optional[torch.FloatTensor] = None
     # Additions for VLMs
     projector_features: Optional[torch.FloatTensor] = None
 
@@ -488,12 +495,12 @@ class PrismaticForConditionalGeneration(PrismaticPreTrainedModel):
         if use_film:
             # FiLM: Infuse language inputs into visual features
             with torch.no_grad():
-                patch_features = self.vision_backbone(pixel_values, language_embeddings)  # (bsz, 256 * num_images, D)
+                patch_features, new_image_patches = self.vision_backbone(pixel_values, language_embeddings)  # (bsz, 256 * num_images, D)
         else:
-            patch_features = self.vision_backbone(pixel_values)  # (bsz, 256 * num_images, D)
+            patch_features, new_image_patches = self.vision_backbone(pixel_values)  # (bsz, 256 * num_images, D)
 
         # Project patch embeddings into language embedding space
-        return self.projector(patch_features)
+        return self.projector(patch_features), new_image_patches
 
     def _process_proprio_features(self, projected_patch_embeddings, proprio, proprio_projector):
         """Process proprioceptive features and append to vision features"""
@@ -637,7 +644,7 @@ class PrismaticForConditionalGeneration(PrismaticPreTrainedModel):
 
             # Get visual features
             # print(pixel_values.shape)
-            projected_patch_embeddings = self._process_vision_features(pixel_values, language_embeddings, use_film)
+            projected_patch_embeddings, new_image_patches = self._process_vision_features(pixel_values, language_embeddings, use_film)
 
             # Process action embeddings
             if noisy_actions is not None:
@@ -708,6 +715,7 @@ class PrismaticForConditionalGeneration(PrismaticPreTrainedModel):
             hidden_states=language_model_output.hidden_states,
             attentions=language_model_output.attentions,
             projector_features=projected_patch_embeddings,
+            new_image_patches=new_image_patches,
             )
 
 
