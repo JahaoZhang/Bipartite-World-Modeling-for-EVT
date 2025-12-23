@@ -38,7 +38,7 @@ from prismatic.extern.hf.processing_prismatic import PrismaticImageProcessor, Pr
 from prismatic.models.action_heads import L1RegressionActionHead
 from prismatic.models.backbones.llm.prompting import PurePromptBuilder
 from prismatic.models.film_vit_wrapper import FiLMedPrismaticVisionBackbone
-from prismatic.models.projectors import ProprioProjector, TrajMLP, PositionMLP
+from prismatic.models.projectors import ProprioProjector, TrajMLP, PositionMLP, CrossAttentionDynamics, LatentToFeature
 from prismatic.training.train_utils import (
     compute_actions_l1_loss,
     compute_token_accuracy,
@@ -292,6 +292,8 @@ def run_forward_pass(
     path_point_token_MLP,
     position_head,
     position_token_MLP,
+    cross_attention_dynamics,
+    latent_to_feature,
     proprio_projector,
     batch,
     action_tokenizer,
@@ -317,6 +319,8 @@ def run_forward_pass(
         position_token_MLP (nn.Module): Position token MLP module.
         noisy_action_projector (nn.Module): Noisy action projector module (only used for diffusion).
         proprio_projector (nn.Module): Proprioceptive state projector module.
+        cross_attention_dynamics (nn.Module): Cross attention dynamics module.
+        latent_to_feature (nn.Module): Latent to feature module.
         batch (dict): Input batch.
         action_tokenizer (ActionTokenizer): Action tokenizer.
         device_id (str): Device ID.
@@ -444,6 +448,26 @@ def run_forward_pass(
         # multi_layer_path_point_hidden_states = torch.cat(multi_layer_path_point_hidden_states, dim = 1)
         # multi_layer_action_hidden_states = torch.cat(multi_layer_action_hidden_states, dim = 1)
 
+        # ===> compute env rebuild loss =====================================================
+        next_image_patches = output.new_image_patches
+        # print("next_image_patches shape: ", next_image_patches.shape)
+        task_latten_states = task_latten_states.squeeze(1)
+        ground_truth_curr_action = ground_truth_actions
+        # print("task_latten_states shape: ", task_latten_states.shape)
+        # print("ground_truth_curr_action shape: ", ground_truth_curr_action.shape)
+        next_env_state = cross_attention_dynamics(task_latten_states, ground_truth_curr_action)
+        next_env_state_feature = latent_to_feature(next_env_state)
+
+        teacher = F.normalize(next_image_patches.detach(), dim=-1)
+        student = F.normalize(next_env_state_feature, dim=-1)
+        env_rebuild_loss = F.mse_loss(student, teacher)
+
+        metrics.update(
+            {
+                "env_rebuild_loss": env_rebuild_loss.item(),
+            }
+        )
+
         # ===> predict position =====================================================
         predicted_position = position_head.module.predict_action(
             multi_layer_position_hidden_states,
@@ -524,7 +548,7 @@ def run_forward_pass(
             phase=cfg.phase,
             )
         action_loss = torch.nn.L1Loss()(predicted_actions, ground_truth_actions)
-        loss = position_loss + path_point_loss + action_loss
+        loss = position_loss + path_point_loss + action_loss + env_rebuild_loss * 500
         metrics.update(
             {
                 "action_loss": action_loss.item(),  # Detached value for logging
@@ -1055,6 +1079,24 @@ def finetune(cfg: FinetuneConfig) -> None:
         to_bf16=True,
         )
 
+        cross_attention_dynamics = init_module(
+            CrossAttentionDynamics,
+            "cross_attention_dynamics",
+            cfg,
+            device_id,
+            {"latent_dim": vla.module.llm_dim, "action_dim": ACTION_DIM},
+            to_bf16=True,
+        )
+
+        latent_to_feature = init_module(
+            LatentToFeature,
+            "latent_to_feature",
+            cfg,
+            device_id,
+            {"latent_dim": vla.module.llm_dim, "feature_dim": 2176},
+            to_bf16=True,
+        )
+
     # Get number of vision patches
     # NUM_PATCHES = vla.module.vision_backbone.get_num_patches() * vla.module.vision_backbone.get_num_images_in_input()
     NUM_PATCHES = 256
@@ -1068,6 +1110,8 @@ def finetune(cfg: FinetuneConfig) -> None:
         trainable_params += [param for param in path_point_token_MLP.parameters() if param.requires_grad]
         trainable_params += [param for param in position_head.parameters() if param.requires_grad]
         trainable_params += [param for param in position_token_MLP.parameters() if param.requires_grad]
+        trainable_params += [param for param in cross_attention_dynamics.parameters() if param.requires_grad]
+        trainable_params += [param for param in latent_to_feature.parameters() if param.requires_grad]
     if cfg.use_proprio:
         trainable_params += [param for param in proprio_projector.parameters() if param.requires_grad]
     print(f"# total trainable params: {sum(p.numel() for p in trainable_params)}")
@@ -1179,6 +1223,7 @@ def finetune(cfg: FinetuneConfig) -> None:
         "path_point_loss": deque(maxlen=cfg.grad_accumulation_steps),
         "action_loss": deque(maxlen=cfg.grad_accumulation_steps),
         "position_loss": deque(maxlen=cfg.grad_accumulation_steps),
+        "env_rebuild_loss": deque(maxlen=cfg.grad_accumulation_steps),
     }
 
     # Start training
@@ -1199,6 +1244,8 @@ def finetune(cfg: FinetuneConfig) -> None:
                 path_point_token_MLP=path_point_token_MLP,
                 position_head=position_head,
                 position_token_MLP=position_token_MLP,
+                cross_attention_dynamics=cross_attention_dynamics,
+                latent_to_feature=latent_to_feature,
                 proprio_projector=proprio_projector if cfg.use_proprio else None,
                 batch=batch,
                 action_tokenizer=action_tokenizer,
