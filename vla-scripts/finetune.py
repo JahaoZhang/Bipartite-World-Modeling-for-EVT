@@ -424,15 +424,28 @@ def run_forward_pass(
             # last_hidden_states = output.hidden_states[-1]  # (B, seq_len, D)
             # Get hidden states for text portion of prompt+response (after the vision patches)
             text_hidden_states = item[:, num_patches:-1]
+            # print("text_hidden_states shape: ", text_hidden_states.shape)
             # Get hidden states for action portion of response
             batch_size = batch["input_ids"].shape[0]
             # actions_hidden_states = text_hidden_states[:, -1, :].reshape(batch_size, 1, -1).to(torch.bfloat16)
-            query_hidden_states = text_hidden_states[current_action_mask | next_actions_mask].reshape(batch_size, 1,NUM_TOKENS, -1).to(torch.bfloat16)
+            query_hidden_states = text_hidden_states[current_action_mask | next_actions_mask]
+            query_hidden_states = query_hidden_states.reshape(batch_size, 1,NUM_TOKENS, -1).to(torch.bfloat16)
+            select_mask = current_action_mask | next_actions_mask
+            # print("select_mask shape: ", select_mask)
+            lang_mask = ~select_mask
+            # print("lang_mask shape: ", lang_mask)
+            # print("text_hidden_states shape: ", text_hidden_states.shape)
+            lang_hidden_states = text_hidden_states[lang_mask].reshape(batch_size, -1, text_hidden_states.shape[-1]).unsqueeze(1).to(torch.bfloat16)
+            # print("lang_hidden_states shape: ", lang_hidden_states.shape)
             third = NUM_TOKENS // 3
 
             position_hidden_states = query_hidden_states[:, :, :third]
             path_point_hidden_states   = query_hidden_states[:, :, third:2*third]
             actions_hidden_states  = query_hidden_states[:, :, 2*third:3*third]
+
+            position_hidden_states = torch.cat((lang_hidden_states, position_hidden_states), 2)
+            path_point_hidden_states = torch.cat((lang_hidden_states, path_point_hidden_states), 2)
+            actions_hidden_states = torch.cat((lang_hidden_states, actions_hidden_states), 2)
 
             task_latten_states = item[:, :num_patches].reshape(batch_size, 1, num_patches , -1)
 
