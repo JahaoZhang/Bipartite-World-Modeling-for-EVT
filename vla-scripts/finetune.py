@@ -75,7 +75,7 @@ class FinetuneConfig:
     data_root_dir: Path = Path("/home/mmc_jhzhang/tensorflow_datasets/hm3dpath_dataset")      # Directory containing RLDS datasets
     dataset_name: str = "hm3dpath_dataset"    # Name of fine-tuning dataset (e.g., `aloha_scoop_x_into_bowl`)
     run_root_dir: Path = Path("outputs")                # Path to directory to store logs & checkpoints
-    shuffle_buffer_size: int = 20_000               # Dataloader shuffle buffer size (can reduce if OOM errors occur)
+    shuffle_buffer_size: int = 30_000               # Dataloader shuffle buffer size (can reduce if OOM errors occur)
 
     # Algorithm and architecture
     use_l1_regression: bool = True                   # If True, trains continuous action head with L1 regression objective
@@ -461,25 +461,25 @@ def run_forward_pass(
         # multi_layer_path_point_hidden_states = torch.cat(multi_layer_path_point_hidden_states, dim = 1)
         # multi_layer_action_hidden_states = torch.cat(multi_layer_action_hidden_states, dim = 1)
 
-        # ===> compute env rebuild loss =====================================================
-        next_image_patches = output.new_image_patches
-        # print("next_image_patches shape: ", next_image_patches.shape)
-        task_latten_states = task_latten_states.squeeze(1)
-        ground_truth_curr_action = ground_truth_actions
-        # print("task_latten_states shape: ", task_latten_states.shape)
-        # print("ground_truth_curr_action shape: ", ground_truth_curr_action.shape)
-        next_env_state = cross_attention_dynamics(task_latten_states, ground_truth_curr_action)
-        next_env_state_feature = latent_to_feature(next_env_state)
+        # # ===> compute env rebuild loss =====================================================
+        # next_image_patches = output.new_image_patches
+        # # print("next_image_patches shape: ", next_image_patches.shape)
+        # task_latten_states = task_latten_states.squeeze(1)
+        # ground_truth_curr_action = ground_truth_actions
+        # # print("task_latten_states shape: ", task_latten_states.shape)
+        # # print("ground_truth_curr_action shape: ", ground_truth_curr_action.shape)
+        # next_env_state = cross_attention_dynamics(task_latten_states, ground_truth_curr_action)
+        # next_env_state_feature = latent_to_feature(next_env_state)
 
-        teacher = F.normalize(next_image_patches.detach(), dim=-1)
-        student = F.normalize(next_env_state_feature, dim=-1)
-        env_rebuild_loss = F.mse_loss(student, teacher)
+        # teacher = F.normalize(next_image_patches.detach(), dim=-1)
+        # student = F.normalize(next_env_state_feature, dim=-1)
+        # env_rebuild_loss = F.mse_loss(student, teacher)
 
-        metrics.update(
-            {
-                "env_rebuild_loss": env_rebuild_loss.item(),
-            }
-        )
+        # metrics.update(
+        #     {
+        #         "env_rebuild_loss": env_rebuild_loss.item(),
+        #     }
+        # )
 
         # ===> predict position =====================================================
         predicted_position = position_head.module.predict_action(
@@ -561,7 +561,8 @@ def run_forward_pass(
             phase=cfg.phase,
             )
         action_loss = torch.nn.L1Loss()(predicted_actions, ground_truth_actions)
-        loss = position_loss + path_point_loss + action_loss + env_rebuild_loss * 500
+        # loss = position_loss + path_point_loss + action_loss + env_rebuild_loss * 500
+        loss = position_loss + path_point_loss + action_loss
         metrics.update(
             {
                 "action_loss": action_loss.item(),  # Detached value for logging
