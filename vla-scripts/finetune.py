@@ -286,35 +286,46 @@ def init_module(
 def pool_patches_in_box(patch_feats, boxes, img_size=224, grid_size=16):
     """
     patch_feats: (B, 256, dim)
-    boxes: (B, 4)  (x1, y1, x2, y2) in pixel coords
-    return: (B, dim)
+    boxes: (B, 4) pixel coords (x1,y1,x2,y2)
+    return: (B, 1, dim)
     """
     B, N, dim = patch_feats.shape
-    assert N == grid_size * grid_size
-
     patch_size = img_size // grid_size
     device = patch_feats.device
 
     out = []
-
     for b in range(B):
-        x1, y1, x2, y2 = boxes[b]
+        x1, y1, x2, y2 = boxes[b].tolist()
+
+        # ---- 无效 / 不可见：-1 或 0面积 ----
+        if (x1 < 0 or y1 < 0 or x2 < 0 or y2 < 0) or (x2 <= x1) or (y2 <= y1):
+            out.append(patch_feats[b].mean(dim=0))
+            continue
 
         px1 = max(int(x1 // patch_size), 0)
         py1 = max(int(y1 // patch_size), 0)
         px2 = min(int((x2 - 1) // patch_size), grid_size - 1)
         py2 = min(int((y2 - 1) // patch_size), grid_size - 1)
 
+        # 防御：离散后变空
+        if px1 > px2 or py1 > py2:
+            out.append(patch_feats[b].mean(dim=0))
+            continue
+
         ys, xs = torch.meshgrid(
             torch.arange(py1, py2 + 1, device=device),
             torch.arange(px1, px2 + 1, device=device),
             indexing="ij"
         )
+        idx = (ys * grid_size + xs).reshape(-1)
 
-        idx = (ys * grid_size + xs).reshape(-1)   # (K,)
-        out.append(patch_feats[b, idx].mean(dim=0))
+        # 防御：idx 空
+        if idx.numel() == 0:
+            out.append(patch_feats[b].mean(dim=0))
+        else:
+            out.append(patch_feats[b, idx].mean(dim=0))
 
-    return torch.stack(out, dim=0).unsqueeze(1)   # (B, 1, dim)
+    return torch.stack(out, dim=0).unsqueeze(1)  # (B,1,dim)
 
 
 def run_forward_pass(
@@ -382,8 +393,8 @@ def run_forward_pass(
     ground_truth_path_points = ground_truth_path_points.reshape(batch_size, 1, 16)
     ground_truth_next_position = batch["position"].to(device_id).to(torch.bfloat16)
     ground_truth_next_position = ground_truth_next_position.reshape(batch_size, 1, 2)
-    ground_truth_next_box = batch["box"].to(device_id).to(torch.bfloat16)
-    ground_truth_next_box = ground_truth_next_box.reshape(batch_size, 1, 4)
+    ground_truth_next_box = batch["box"].to(device_id).float()
+    ground_truth_next_box = ground_truth_next_box.reshape(batch_size, 4)
     ground_truth_path_points_list = batch["path_points_list"].to(device_id).to(torch.bfloat16)
     # ground_truth_path_points_list = ground_truth_path_points_list.reshape(batch_size, 1, 16)
     ground_truth_position_list = batch["position_list"].to(device_id).to(torch.bfloat16)
@@ -522,11 +533,15 @@ def run_forward_pass(
         for_position_hidden_states = for_position_hidden_states.squeeze(1)
         patches_for_target = pool_patches_in_box(next_image_patches, ground_truth_next_box)
         # ground_truth_next_box = ground_truth_next_box.squeeze(1)
+        ground_truth_curr_action = ground_truth_actions
         next_env_state = target_cross_attention_dynamics(for_position_hidden_states, ground_truth_curr_action)
         next_env_state_feature = target_latent_to_feature(next_env_state)
+        # print('patches_for_target shape: ', patches_for_target.shape)
+        # print('next_env_state_feature shape: ', next_env_state_feature.shape)
         teacher = F.normalize(patches_for_target.detach(), dim=-1)
         student = F.normalize(next_env_state_feature, dim=-1)
         target_rebuild_loss = F.mse_loss(student, teacher)
+        # print('target_rebuild_loss: ', target_rebuild_loss.item())
         metrics.update(
             {
                 "target_rebuild_loss": target_rebuild_loss.item(),
@@ -583,7 +598,7 @@ def run_forward_pass(
             curr_action_l1_loss = torch.nn.L1Loss()(ground_truth_curr_action, predicted_curr_action)
             next_actions_l1_loss = torch.nn.L1Loss()(ground_truth_next_actions, predicted_next_actions)
             if compute_diffusion_l1:
-                print('curr: ',curr_action_l1_loss.item())
+                print('curr: 111',curr_action_l1_loss.item())
                 # print('next: ',next_actions_l1_loss.item())
 
             metrics.update(
@@ -616,7 +631,7 @@ def run_forward_pass(
             )
         action_loss = torch.nn.L1Loss()(predicted_actions, ground_truth_actions)
         # loss = position_loss + path_point_loss + action_loss + env_rebuild_loss * 500
-        loss = position_loss + path_point_loss + action_loss
+        loss = position_loss + path_point_loss + action_loss + target_rebuild_loss * 500
         metrics.update(
             {
                 "action_loss": action_loss.item(),  # Detached value for logging
