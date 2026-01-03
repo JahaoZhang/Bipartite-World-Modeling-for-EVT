@@ -38,7 +38,7 @@ from prismatic.extern.hf.processing_prismatic import PrismaticImageProcessor, Pr
 from prismatic.models.action_heads import L1RegressionActionHead
 from prismatic.models.backbones.llm.prompting import PurePromptBuilder
 from prismatic.models.film_vit_wrapper import FiLMedPrismaticVisionBackbone
-from prismatic.models.projectors import ProprioProjector, TrajMLP, PositionMLP, CrossAttentionDynamics, LatentToFeature
+from prismatic.models.projectors import ProprioProjector, TrajMLP, PositionMLP, CrossAttentionDynamics, LatentToFeature, TargetLatentToFeature
 from prismatic.training.train_utils import (
     compute_actions_l1_loss,
     compute_token_accuracy,
@@ -294,6 +294,8 @@ def run_forward_pass(
     position_token_MLP,
     cross_attention_dynamics,
     latent_to_feature,
+    target_cross_attention_dynamics,
+    target_latent_to_feature,
     proprio_projector,
     batch,
     action_tokenizer,
@@ -1111,6 +1113,24 @@ def finetune(cfg: FinetuneConfig) -> None:
             to_bf16=True,
         )
 
+        target_cross_attention_dynamics = init_module(
+            CrossAttentionDynamics,
+            "target_cross_attention_dynamics",
+            cfg,
+            device_id,
+            {"latent_dim": vla.module.llm_dim, "action_dim": ACTION_DIM},
+            to_bf16=True,
+        )
+
+        target_latent_to_feature = init_module(
+            TargetLatentToFeature,
+            "target_latent_to_feature",
+            cfg,
+            device_id,
+            {"latent_dim": vla.module.llm_dim, "feature_dim": 2176},
+            to_bf16=True,
+        )
+
     # Get number of vision patches
     # NUM_PATCHES = vla.module.vision_backbone.get_num_patches() * vla.module.vision_backbone.get_num_images_in_input()
     NUM_PATCHES = 256
@@ -1126,6 +1146,8 @@ def finetune(cfg: FinetuneConfig) -> None:
         trainable_params += [param for param in position_token_MLP.parameters() if param.requires_grad]
         trainable_params += [param for param in cross_attention_dynamics.parameters() if param.requires_grad]
         trainable_params += [param for param in latent_to_feature.parameters() if param.requires_grad]
+        trainable_params += [param for param in target_cross_attention_dynamics.parameters() if param.requires_grad]
+        trainable_params += [param for param in target_latent_to_feature.parameters() if param.requires_grad]
     if cfg.use_proprio:
         trainable_params += [param for param in proprio_projector.parameters() if param.requires_grad]
     print(f"# total trainable params: {sum(p.numel() for p in trainable_params)}")
@@ -1260,6 +1282,8 @@ def finetune(cfg: FinetuneConfig) -> None:
                 position_token_MLP=position_token_MLP,
                 cross_attention_dynamics=cross_attention_dynamics,
                 latent_to_feature=latent_to_feature,
+                target_cross_attention_dynamics=target_cross_attention_dynamics,
+                target_latent_to_feature=target_latent_to_feature,
                 proprio_projector=proprio_projector if cfg.use_proprio else None,
                 batch=batch,
                 action_tokenizer=action_tokenizer,

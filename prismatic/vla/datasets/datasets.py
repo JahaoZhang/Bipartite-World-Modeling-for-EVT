@@ -51,10 +51,16 @@ class RLDSBatchTransform:
         actions = rlds_batch["action"][self.image_num - 1]
         # Get images as image_num images
         images = rlds_batch["observation"]["image_primary"]
-        path_points = rlds_batch["path_points"][self.image_num - 1]
-        position = rlds_batch["position"][self.image_num]
+
+        path_points = rlds_batch["path_points"][self.image_num - 1] # t path points
         path_points_list = rlds_batch["path_points"]
+
+        position = rlds_batch["position"][self.image_num] # t+1 position
         position_list = rlds_batch["position"]
+
+        box_list = rlds_batch["box"]
+        box = box_list[self.image_num] # t+1 box
+
         # print("path_points.shape: ", path_points.shape)
         imgs = [Image.fromarray(img) for img in images]
         current_action = rlds_batch["action"][self.image_num - 1]
@@ -148,7 +154,8 @@ class RLDSBatchTransform:
             path_points=path_points, 
             path_points_list=path_points_list, 
             position_list=position_list,
-            position=position
+            position=position,
+            box=box
         )
 
         # Add additional inputs

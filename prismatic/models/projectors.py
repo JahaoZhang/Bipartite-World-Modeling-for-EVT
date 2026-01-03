@@ -168,3 +168,34 @@ class LatentToFeature(nn.Module):
         z = self.norm(z)
         feature = self.mlp(z)
         return feature
+
+class TargetLatentToFeature(nn.Module):
+    def __init__(
+        self,
+        latent_dim: int,
+        feature_dim: int,
+        mlp_ratio: float = 2.0,
+        dropout: float = 0.0,
+    ):
+        super().__init__()
+
+        hidden_dim = int(latent_dim * mlp_ratio)
+
+        self.norm = nn.LayerNorm(latent_dim)
+
+        self.mlp = nn.Sequential(
+            nn.Linear(latent_dim, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, feature_dim),
+        )
+
+    def forward(self, z: torch.Tensor):
+        """
+        z: [B, N, latent_dim]
+        return: [B, N, feature_dim]
+        """
+        z = self.norm(z)
+        z = z.mean(dim=1, keepdim=True) 
+        feature = self.mlp(z)
+        return feature

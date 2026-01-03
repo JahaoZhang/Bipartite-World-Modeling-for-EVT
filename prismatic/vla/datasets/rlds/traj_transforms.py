@@ -47,6 +47,7 @@ def chunk_act_obs(traj: Dict, window_size: int, future_action_window_size: int =
     traj["action"] = tf.gather(traj["action"], floored_action_chunk_indices)
     traj["path_points"] = tf.gather(traj["path_points"], floored_action_chunk_indices)
     traj["position"] = tf.gather(traj["position"], floored_action_chunk_indices)
+    traj["box"] = tf.gather(traj["box"], floored_action_chunk_indices)
     # traj["path_points_list"] = tf.gather(traj["path_points_list"], floored_action_chunk_indices)
     # traj["position_list"] = tf.gather(traj["position_list"], floored_action_chunk_indices)
 
