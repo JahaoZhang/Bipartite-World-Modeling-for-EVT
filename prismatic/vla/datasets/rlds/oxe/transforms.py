@@ -894,9 +894,13 @@ def hm3dpathpadsttdt_dataset_transform(sample):
 def hm3dpathpadsttdt224px_dataset_transform(sample):
     return sample
 
+def hm3dpathpadsttdt224pxplusbr_dataset_transform(sample):
+    return sample
+
 # === Registry ===
 OXE_STANDARDIZATION_TRANSFORMS = {
     "hm3dpathpadsttdt224px_dataset": hm3dpathpadsttdt224px_dataset_transform,
+    "hm3dpathpadsttdt224pxplusbr_dataset": hm3dpathpadsttdt224pxplusbr_dataset_transform,
     "envs_dataset": envs_dataset_transform,
     "hm3dpath_dataset": hm3dpath_dataset_transform,
     "hm3dpathpad_dataset": hm3dpathpad_dataset_transform,

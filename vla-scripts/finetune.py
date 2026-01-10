@@ -13,6 +13,8 @@ from typing import Dict, Optional, Tuple, Type
 import torch.nn.functional as F
 import draccus
 import torch
+torch.set_num_threads(8)
+torch.set_num_interop_threads(6)
 import torch.distributed as dist
 import torch.nn as nn
 import tqdm
@@ -23,6 +25,9 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import MultiStepLR, CosineAnnealingLR
 from torch.utils.data import DataLoader
+import tensorflow as tf
+tf.config.threading.set_intra_op_parallelism_threads(8)
+tf.config.threading.set_inter_op_parallelism_threads(6)
 from transformers import AutoConfig, AutoImageProcessor, AutoModelForVision2Seq, AutoProcessor
 from transformers.modeling_outputs import CausalLMOutputWithPast
 import wandb
@@ -75,7 +80,7 @@ class FinetuneConfig:
     data_root_dir: Path = Path("/home/mmc_jhzhang/tensorflow_datasets/hm3dpath_dataset")      # Directory containing RLDS datasets
     dataset_name: str = "hm3dpath_dataset"    # Name of fine-tuning dataset (e.g., `aloha_scoop_x_into_bowl`)
     run_root_dir: Path = Path("outputs")                # Path to directory to store logs & checkpoints
-    shuffle_buffer_size: int = 30_000               # Dataloader shuffle buffer size (can reduce if OOM errors occur)
+    shuffle_buffer_size: int = 20_000               # Dataloader shuffle buffer size (can reduce if OOM errors occur)
 
     # Algorithm and architecture
     use_l1_regression: bool = True                   # If True, trains continuous action head with L1 regression objective
@@ -631,7 +636,7 @@ def run_forward_pass(
             )
         action_loss = torch.nn.L1Loss()(predicted_actions, ground_truth_actions)
         # loss = position_loss + path_point_loss + action_loss + env_rebuild_loss * 500
-        loss = position_loss + path_point_loss + action_loss + target_rebuild_loss * 500 + env_rebuild_loss * 500
+        loss = position_loss + path_point_loss + action_loss + target_rebuild_loss * 2500 + env_rebuild_loss * 500
         metrics.update(
             {
                 "action_loss": action_loss.item(),  # Detached value for logging
