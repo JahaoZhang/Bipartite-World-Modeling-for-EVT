@@ -636,7 +636,7 @@ def run_forward_pass(
             )
         action_loss = torch.nn.L1Loss()(predicted_actions, ground_truth_actions)
         # loss = position_loss + path_point_loss + action_loss + env_rebuild_loss * 500
-        loss = position_loss + path_point_loss + action_loss + target_rebuild_loss * 2500 + env_rebuild_loss * 500
+        loss = position_loss + path_point_loss + action_loss + target_rebuild_loss * 500 + env_rebuild_loss * 500
         metrics.update(
             {
                 "action_loss": action_loss.item(),  # Detached value for logging
