@@ -535,11 +535,11 @@ def run_forward_pass(
 
         # # ===> compute target rebuild loss =====================================================
         next_image_patches = output.new_image_patches
-        for_position_hidden_states = for_position_hidden_states.squeeze(1)
+        position_hidden_states = position_hidden_states.squeeze(1)
         patches_for_target = pool_patches_in_box(next_image_patches, ground_truth_next_box)
         # ground_truth_next_box = ground_truth_next_box.squeeze(1)
         ground_truth_curr_action = ground_truth_actions
-        next_env_state = target_cross_attention_dynamics(for_position_hidden_states, ground_truth_curr_action)
+        next_env_state = target_cross_attention_dynamics(position_hidden_states, ground_truth_curr_action)
         next_env_state_feature = target_latent_to_feature(next_env_state)
         # print('patches_for_target shape: ', patches_for_target.shape)
         # print('next_env_state_feature shape: ', next_env_state_feature.shape)
