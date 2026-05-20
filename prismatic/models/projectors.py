@@ -166,6 +166,7 @@ class LatentToFeature(nn.Module):
         return: [B, N, feature_dim]
         """
         z = self.norm(z)
+        z = z.mean(dim=1, keepdim=True) 
         feature = self.mlp(z)
         return feature
 

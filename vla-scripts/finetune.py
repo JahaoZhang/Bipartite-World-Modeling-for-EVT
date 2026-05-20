@@ -333,6 +333,59 @@ def pool_patches_in_box(patch_feats, boxes, img_size=224, grid_size=16):
     return torch.stack(out, dim=0).unsqueeze(1)  # (B,1,dim)
 
 
+def pool_patches_outside_box(patch_feats, boxes, img_size=224, grid_size=16):
+    """
+    patch_feats: (B, 256, dim)
+    boxes: (B, 4) pixel coords (x1,y1,x2,y2)
+    return: (B, 1, dim)  # pooled box-outside patches
+    """
+    B, N, dim = patch_feats.shape
+    patch_size = img_size // grid_size
+    device = patch_feats.device
+
+    out = []
+    all_idx = torch.arange(grid_size * grid_size, device=device)
+
+    for b in range(B):
+        x1, y1, x2, y2 = boxes[b].tolist()
+
+        # ---------- 防御 1：box 无效 ----------
+        if (x1 < 0 or y1 < 0 or x2 < 0 or y2 < 0) or (x2 <= x1) or (y2 <= y1):
+            # 无 target，env = 全局
+            out.append(patch_feats[b].mean(dim=0))
+            continue
+
+        px1 = max(int(x1 // patch_size), 0)
+        py1 = max(int(y1 // patch_size), 0)
+        px2 = min(int((x2 - 1) // patch_size), grid_size - 1)
+        py2 = min(int((y2 - 1) // patch_size), grid_size - 1)
+
+        # ---------- 防御 2：离散后 box 为空 ----------
+        if px1 > px2 or py1 > py2:
+            out.append(patch_feats[b].mean(dim=0))
+            continue
+
+        ys, xs = torch.meshgrid(
+            torch.arange(py1, py2 + 1, device=device),
+            torch.arange(px1, px2 + 1, device=device),
+            indexing="ij"
+        )
+        box_idx = (ys * grid_size + xs).reshape(-1)
+
+        # ---------- box 外 patch ----------
+        mask = torch.ones(grid_size * grid_size, dtype=torch.bool, device=device)
+        mask[box_idx] = False
+        outside_idx = all_idx[mask]
+
+        # ---------- 防御 3：box 覆盖全图 ----------
+        if outside_idx.numel() == 0:
+            out.append(patch_feats[b].mean(dim=0))
+        else:
+            out.append(patch_feats[b, outside_idx].mean(dim=0))
+
+    return torch.stack(out, dim=0).unsqueeze(1)  # (B,1,dim)
+
+
 def run_forward_pass(
     vla,
     action_head,
@@ -515,6 +568,8 @@ def run_forward_pass(
 
         # # ===> compute env rebuild loss =====================================================
         next_image_patches = output.new_image_patches
+        patches_for_env = pool_patches_outside_box(next_image_patches, ground_truth_next_box)
+
         # print("next_image_patches shape: ", next_image_patches.shape)
         task_latten_states = task_latten_states.squeeze(1)
         ground_truth_curr_action = ground_truth_actions
@@ -523,7 +578,7 @@ def run_forward_pass(
         next_env_state = cross_attention_dynamics(task_latten_states, ground_truth_curr_action)
         next_env_state_feature = latent_to_feature(next_env_state)
 
-        teacher = F.normalize(next_image_patches.detach(), dim=-1)
+        teacher = F.normalize(patches_for_env.detach(), dim=-1)
         student = F.normalize(next_env_state_feature, dim=-1)
         env_rebuild_loss = F.mse_loss(student, teacher)
 
