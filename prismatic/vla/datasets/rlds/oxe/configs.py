@@ -52,129 +52,9 @@ class ActionEncoding(IntEnum):
 
 # === Individual Dataset Configs ===
 OXE_DATASET_CONFIGS = {
-    "envs_dataset": {
-        "image_obs_keys": {
-            "primary": "image",   # 必须和 TFRecord 中的 key 一致
-            "secondary": None,
-            "wrist": None,
-        },
-        "depth_obs_keys": {
-            "primary": None,
-            "secondary": None,
-            "wrist": None,
-        },
-        "state_obs_keys": [None],              # 没有 proprio 就留空
-        "state_encoding": StateEncoding.NONE,  # 无 proprio 状态
-        "action_encoding": ActionEncoding.EEF_POS,  # ✅ 自定义动作类型
-        "aux_kwargs": {
-            # ✅ 两种都要对齐到动作维度=2
-            "absolute_action_mask": [True, True],          # 或者设成 None 关闭检查
-            "action_normalization_mask": [True, True],       # 0=需要做归一化，1=跳过归一化
-        },
-    },
-    "hm3dpath_dataset": {
-        "image_obs_keys": {
-            "primary": "image",   # 必须和 TFRecord 中的 key 一致
-            "secondary": None,
-            "wrist": None,
-        },
-        "depth_obs_keys": {
-            "primary": None,
-            "secondary": None,
-            "wrist": None,
-        },
-        "state_obs_keys": [None],              # 没有 proprio 就留空
-        "state_encoding": StateEncoding.NONE,  # 无 proprio 状态
-        "action_encoding": ActionEncoding.EEF_POS,  # ✅ 自定义动作类型
-        "aux_kwargs": {
-            # ✅ 两种都要对齐到动作维度=2
-            "absolute_action_mask": [True, True, True],          # 或者设成 None 关闭检查
-            "action_normalization_mask": [True, True, True],       # 0=需要做归一化，1=跳过归一化
-        },
-    },
-    "hm3dpathpad_dataset": {
-        "image_obs_keys": {
-            "primary": "image",   # 必须和 TFRecord 中的 key 一致
-            "secondary": None,
-            "wrist": None,
-        },
-        "depth_obs_keys": {
-            "primary": None,
-            "secondary": None,
-            "wrist": None,
-        },
-        "state_obs_keys": [None],              # 没有 proprio 就留空
-        "state_encoding": StateEncoding.NONE,  # 无 proprio 状态
-        "action_encoding": ActionEncoding.EEF_POS,  # ✅ 自定义动作类型
-        "aux_kwargs": {
-            # ✅ 两种都要对齐到动作维度=2
-            "absolute_action_mask": [True, True, True],          # 或者设成 None 关闭检查
-            "action_normalization_mask": [True, True, True],       # 0=需要做归一化，1=跳过归一化
-        },
-    },
-    "hm3dpathpadunreal_dataset": {
-        "image_obs_keys": {
-            "primary": "image",   # 必须和 TFRecord 中的 key 一致
-            "secondary": None,
-            "wrist": None,
-        },
-        "depth_obs_keys": {
-            "primary": None,
-            "secondary": None,
-            "wrist": None,
-        },
-        "state_obs_keys": [None],              # 没有 proprio 就留空
-        "state_encoding": StateEncoding.NONE,  # 无 proprio 状态
-        "action_encoding": ActionEncoding.EEF_POS,  # ✅ 自定义动作类型
-        "aux_kwargs": {
-            # ✅ 两种都要对齐到动作维度=2
-            "absolute_action_mask": [True, True, True],          # 或者设成 None 关闭检查
-            "action_normalization_mask": [True, True, True],       # 0=需要做归一化，1=跳过归一化
-        },
-    },
-    "hm3dpathpaddt_dataset": {
-        "image_obs_keys": {
-            "primary": "image",   # 必须和 TFRecord 中的 key 一致
-            "secondary": None,
-            "wrist": None,
-        },
-        "depth_obs_keys": {
-            "primary": None,
-            "secondary": None,
-            "wrist": None,
-        },
-        "state_obs_keys": [None],              # 没有 proprio 就留空
-        "state_encoding": StateEncoding.NONE,  # 无 proprio 状态
-        "action_encoding": ActionEncoding.EEF_POS,  # ✅ 自定义动作类型
-        "aux_kwargs": {
-            # ✅ 两种都要对齐到动作维度=2
-            "absolute_action_mask": [True, True, True],          # 或者设成 None 关闭检查
-            "action_normalization_mask": [True, True, True],       # 0=需要做归一化，1=跳过归一化
-        },
-    },
-    "hm3dpathpadsttdt_dataset": {
-        "image_obs_keys": {
-            "primary": "image",   # 必须和 TFRecord 中的 key 一致
-            "secondary": None,
-            "wrist": None,
-        },
-        "depth_obs_keys": {
-            "primary": None,
-            "secondary": None,
-            "wrist": None,
-        },
-        "state_obs_keys": [None],              # 没有 proprio 就留空
-        "state_encoding": StateEncoding.NONE,  # 无 proprio 状态
-        "action_encoding": ActionEncoding.EEF_POS,  # ✅ 自定义动作类型
-        "aux_kwargs": {
-            # ✅ 两种都要对齐到动作维度=2
-            "absolute_action_mask": [True, True, True],          # 或者设成 None 关闭检查
-            "action_normalization_mask": [True, True, True],       # 0=需要做归一化，1=跳过归一化
-        },
-    },
     "hm3dpathpadsttdt224px_dataset": {
         "image_obs_keys": {
-            "primary": "image",   # 必须和 TFRecord 中的 key 一致
+            "primary": "image",
             "secondary": None,
             "wrist": None,
         },
@@ -183,53 +63,12 @@ OXE_DATASET_CONFIGS = {
             "secondary": None,
             "wrist": None,
         },
-        "state_obs_keys": [None],              # 没有 proprio 就留空
-        "state_encoding": StateEncoding.NONE,  # 无 proprio 状态
-        "action_encoding": ActionEncoding.EEF_POS,  # ✅ 自定义动作类型
+        "state_obs_keys": [None],              
+        "state_encoding": StateEncoding.NONE,  
+        "action_encoding": ActionEncoding.EEF_POS,  
         "aux_kwargs": {
-            # ✅ 两种都要对齐到动作维度=2
-            "absolute_action_mask": [True, True, True],          # 或者设成 None 关闭检查
-            "action_normalization_mask": [True, True, True],       # 0=需要做归一化，1=跳过归一化
-        },
-    },
-    "hm3dpathpadsttdt224pxplusbr_dataset": {
-        "image_obs_keys": {
-            "primary": "image",   # 必须和 TFRecord 中的 key 一致
-            "secondary": None,
-            "wrist": None,
-        },
-        "depth_obs_keys": {
-            "primary": None,
-            "secondary": None,
-            "wrist": None,
-        },
-        "state_obs_keys": [None],              # 没有 proprio 就留空
-        "state_encoding": StateEncoding.NONE,  # 无 proprio 状态
-        "action_encoding": ActionEncoding.EEF_POS,  # ✅ 自定义动作类型
-        "aux_kwargs": {
-            # ✅ 两种都要对齐到动作维度=2
-            "absolute_action_mask": [True, True, True],          # 或者设成 None 关闭检查
-            "action_normalization_mask": [True, True, True],       # 0=需要做归一化，1=跳过归一化
-        },
-    },
-    "hm3d0115_dataset": {
-        "image_obs_keys": {
-            "primary": "image",   # 必须和 TFRecord 中的 key 一致
-            "secondary": None,
-            "wrist": None,
-        },
-        "depth_obs_keys": {
-            "primary": None,
-            "secondary": None,
-            "wrist": None,
-        },
-        "state_obs_keys": [None],              # 没有 proprio 就留空
-        "state_encoding": StateEncoding.NONE,  # 无 proprio 状态
-        "action_encoding": ActionEncoding.EEF_POS,  # ✅ 自定义动作类型
-        "aux_kwargs": {
-            # ✅ 两种都要对齐到动作维度=2
-            "absolute_action_mask": [True, True, True],          # 或者设成 None 关闭检查
-            "action_normalization_mask": [True, True, True],       # 0=需要做归一化，1=跳过归一化
+            "absolute_action_mask": [True, True, True],
+            "action_normalization_mask": [True, True, True],
         },
     },
     "fractal20220817_data": {

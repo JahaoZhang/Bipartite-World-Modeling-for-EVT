@@ -65,7 +65,17 @@ def ls_apply_patch(ls_module: LayerScale):
     ls_module.forward = _ls_new_forward.__get__(ls_module, LayerScale)
     del ls_module.gamma
 
-
+def process_grid(vis_embed, grid_size):
+            cur_shape = int(vis_embed.shape[1] ** 0.5)
+            assert grid_size > 1, f'Grid size should be larger than 1, but got {grid_size}'
+            vis_embed = vis_embed.reshape(vis_embed.shape[0], cur_shape, cur_shape, -1)
+            
+            grid_stride = cur_shape // grid_size
+            vis_embed = nn.functional.avg_pool2d(vis_embed.permute(0, 3, 1, 2),
+                                    padding=0,
+                                    kernel_size=grid_stride,
+                                    stride=grid_stride)
+            return vis_embed.permute(0, 2, 3, 1).flatten(1, 2)
 
 # === Prismatic Vision Backbone (nn.Module) Definitions (w/ Fused Backbone Support) ===
 class PrismaticVisionBackbone(nn.Module):
@@ -193,7 +203,7 @@ class PrismaticVisionBackbone(nn.Module):
         self.num_images_in_input = num_images_in_input
 
 
-    def forward(self, pixel_values: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, pixel_values: torch.Tensor, image_feature_memory: Optional[List[torch.Tensor]] = None) -> Tuple[torch.Tensor, Optional[List[List[torch.Tensor]]]]:
         """
         Implements the forward pass for the vision backbone.
 
@@ -208,63 +218,66 @@ class PrismaticVisionBackbone(nn.Module):
                 return self.featurizer(pixel_values)
 
             # Split `pixel_values :: [bsz, 2 * 3, resolution, resolution]` =>> featurize =>> channel stack
-            img, img_fused = torch.split(pixel_values, [3, 3], dim=1)
-            patches, patches_fused = self.featurizer(img), self.fused_featurizer(img_fused)
+            img1, img_fused = torch.split(pixel_values, [3, 3], dim=1)
+            with torch.no_grad():
+                patches, patches_fused = self.featurizer(img1), self.fused_featurizer(img_fused)
 
-            return torch.cat([patches, patches_fused], dim=2)
+            patches_8 = process_grid(patches, 8)
+            patches_fused_8 = process_grid(patches_fused, 8)
+            patches_4 = process_grid(patches, 4)
+            patches_fused_4 = process_grid(patches_fused, 4)
+            patches_2 = process_grid(patches, 2)
+            patches_fused_2 = process_grid(patches_fused, 2)
+            new_frame = [torch.cat([patches_8, patches_fused_8], dim=2), torch.cat([patches_4, patches_fused_4], dim=2), torch.cat([patches_2, patches_fused_2], dim=2)]
+            image_feature_memory.append(new_frame)
+            if len(image_feature_memory) > 28:
+                image_feature_memory.pop(0)
+            while len(image_feature_memory) < 28:
+                image_feature_memory.append(image_feature_memory[-1])
+
+            all_patches_use = []
+            for i in range(len(image_feature_memory)):
+                if i == len(image_feature_memory) - 1:
+                    all_patches_use.append(image_feature_memory[i][0])
+                elif i < len(image_feature_memory) - 1 and i >= 20:
+                    all_patches_use.append(image_feature_memory[i][1])
+                else:
+                    all_patches_use.append(image_feature_memory[i][2])
+
+            return torch.cat(all_patches_use, dim=1), image_feature_memory
 
         else:
             assert self.use_fused_vision_backbone, "Multi-image inputs require using fused backbone!"
 
             # Split `pixel_values` into individual images (each with 6 channels: 3 for SigLIP + 3 for DINOv2)
-            images = torch.split(pixel_values, [6] * (self.num_images_in_input + 1), dim=1)
-            next_image = images[-1]
-            images = images[:-1]
+            images = torch.split(pixel_values, [6] * self.num_images_in_input, dim=1)
 
             # Process each image and collect patches
             all_patches = []
-            def process_grid(vis_embed, grid_size):
-                cur_shape = int(vis_embed.shape[1] ** 0.5)
-                assert grid_size > 1, f'Grid size should be larger than 1, but got {grid_size}'
-                vis_embed = vis_embed.reshape(vis_embed.shape[0], cur_shape, cur_shape, -1)
-                
-                grid_stride = cur_shape // grid_size
-                vis_embed = nn.functional.avg_pool2d(vis_embed.permute(0, 3, 1, 2),
-                                        padding=0,
-                                        kernel_size=grid_stride,
-                                        stride=grid_stride)
-                return vis_embed.permute(0, 2, 3, 1).flatten(1, 2)
+            
             for i, img in enumerate(images):
                 # Split each image further into two stacks of channels (each with 3 channels)
                 img_regular, img_fused = torch.split(img, [3, 3], dim=1)
 
                 # Get patches from both SigLIP and DINOv2 vision transformers
+                
                 with torch.no_grad():
                     patches = self.featurizer(img_regular)
                     patches_fused = self.fused_featurizer(img_fused)
                 ##########
-                # 添加不同历史 images 处理的逻辑
                 if i == len(images) - 1:
                     patches = process_grid(patches, 8)
                     patches_fused = process_grid(patches_fused, 8)
-                elif i < len(images) - 1 and i >= 20:
+                else:
                     patches = process_grid(patches, 4)
                     patches_fused = process_grid(patches_fused, 4)
-                else:
-                    patches = process_grid(patches, 2)
-                    patches_fused = process_grid(patches_fused, 2)
                 ##########
                 # Concatenate SigLIP and DINOv2 patches along the hidden dimension
                 combined_patches = torch.cat([patches, patches_fused], dim=2)
                 all_patches.append(combined_patches)
-
-            img_regular, img_fused = torch.split(next_image, [3, 3], dim=1)
-            with torch.no_grad():
-                new_image_patches = self.featurizer(img_regular)
-                new_image_patches_fused = self.fused_featurizer(img_fused)
-            new_image_patches = torch.cat([new_image_patches, new_image_patches_fused], dim=2)
+            
             # Concatenate all patches along the patch dimension
-            return torch.cat(all_patches, dim=1), new_image_patches
+            return torch.cat(all_patches, dim=1)
 
 
 
@@ -314,7 +327,7 @@ class PrismaticCausalLMOutputWithPast(ModelOutput):
     past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
     hidden_states: Optional[Tuple[torch.FloatTensor, ...]] = None
     attentions: Optional[Tuple[torch.FloatTensor]] = None
-    new_image_patches: Optional[torch.FloatTensor] = None
+
     # Additions for VLMs
     projector_features: Optional[torch.FloatTensor] = None
 
@@ -490,17 +503,16 @@ class PrismaticForConditionalGeneration(PrismaticPreTrainedModel):
         all_actions_mask = current_action_mask | next_actions_mask  # (B, seq_len)
         return all_actions_mask
 
-    def _process_vision_features(self, pixel_values, language_embeddings=None, use_film=False):
+    def _process_vision_features(self, pixel_values, language_embeddings=None, use_film=False, image_feature_memory=None):
         """Process vision features with optional FiLM conditioning"""
         if use_film:
             # FiLM: Infuse language inputs into visual features
-            with torch.no_grad():
-                patch_features, new_image_patches = self.vision_backbone(pixel_values, language_embeddings)  # (bsz, 256 * num_images, D)
+            patch_features, image_feature_memory = self.vision_backbone(pixel_values, language_embeddings, image_feature_memory)  # (bsz, 256 * num_images, D)
         else:
-            patch_features, new_image_patches = self.vision_backbone(pixel_values)  # (bsz, 256 * num_images, D)
+            patch_features, image_feature_memory = self.vision_backbone(pixel_values, image_feature_memory)  # (bsz, 256 * num_images, D)
 
         # Project patch embeddings into language embedding space
-        return self.projector(patch_features), new_image_patches
+        return self.projector(patch_features), image_feature_memory
 
     def _process_proprio_features(self, projected_patch_embeddings, proprio, proprio_projector):
         """Process proprioceptive features and append to vision features"""
@@ -643,8 +655,7 @@ class PrismaticForConditionalGeneration(PrismaticPreTrainedModel):
             )  # (B, lang_seq_len, llm_dim)
 
             # Get visual features
-            # print(pixel_values.shape)
-            projected_patch_embeddings, new_image_patches = self._process_vision_features(pixel_values, language_embeddings, use_film)
+            projected_patch_embeddings = self._process_vision_features(pixel_values, language_embeddings, use_film)
 
             # Process action embeddings
             if noisy_actions is not None:
@@ -715,7 +726,6 @@ class PrismaticForConditionalGeneration(PrismaticPreTrainedModel):
             hidden_states=language_model_output.hidden_states,
             attentions=language_model_output.attentions,
             projector_features=projected_patch_embeddings,
-            new_image_patches=new_image_patches,
             )
 
 
@@ -837,10 +847,49 @@ class OpenVLAForActionPrediction(PrismaticForConditionalGeneration):
 
         return actions
 
+    def _unnormalize_path_points(self, normalized_path_points, unnorm_key=None):
+        """Unnormalize path points using dataset statistics"""
+        path_points_norm_stats = self.get_path_points_stats(unnorm_key)
+        if ACTION_PROPRIO_NORMALIZATION_TYPE == NormalizationType.BOUNDS:
+            mask = path_points_norm_stats.get("mask", np.ones_like(path_points_norm_stats["min"], dtype=bool))
+            action_high, action_low = np.array(path_points_norm_stats["max"]), np.array(path_points_norm_stats["min"])
+        elif ACTION_PROPRIO_NORMALIZATION_TYPE == NormalizationType.BOUNDS_Q99:
+            mask = path_points_norm_stats.get("mask", np.ones_like(path_points_norm_stats["q01"], dtype=bool))
+            action_high, action_low = np.array(path_points_norm_stats["q99"]), np.array(path_points_norm_stats["q01"])
+        else:
+            raise ValueError("Unsupported path points normalization type detected!")
+
+        path_points = np.where(
+            mask,
+            0.5 * (normalized_path_points + 1) * (action_high - action_low + 1e-8) + action_low,
+            normalized_path_points,
+        )
+        return path_points
+
+    def _unnormalize_position(self, normalized_position, unnorm_key=None):
+        """Unnormalize position using dataset statistics"""
+        position_norm_stats = self.get_position_stats(unnorm_key)
+        if ACTION_PROPRIO_NORMALIZATION_TYPE == NormalizationType.BOUNDS:
+            mask = position_norm_stats.get("mask", np.ones_like(position_norm_stats["min"], dtype=bool))
+            position_high, position_low = np.array(position_norm_stats["max"]), np.array(position_norm_stats["min"])
+        elif ACTION_PROPRIO_NORMALIZATION_TYPE == NormalizationType.BOUNDS_Q99:
+            mask = position_norm_stats.get("mask", np.ones_like(position_norm_stats["q01"], dtype=bool))
+            position_high, position_low = np.array(position_norm_stats["q99"]), np.array(position_norm_stats["q01"])
+        else:
+            raise ValueError("Unsupported position normalization type detected!")
+
+        position = np.where(
+            mask,
+            0.5 * (normalized_position + 1) * (position_high - position_low + 1e-8) + position_low,
+            normalized_position,
+        )
+        return position
+
 
     def _regression_or_discrete_prediction(
         self,
         input_embeddings,
+        target_rel_positions,
         all_actions_mask,
         projected_patch_embeddings,
         attention_mask,
@@ -848,6 +897,10 @@ class OpenVLAForActionPrediction(PrismaticForConditionalGeneration):
         NUM_PATCHES,
         NUM_PROMPT_TOKENS,
         action_head=None,
+        path_point_token_MLP=None,
+        path_point_head=None,
+        position_token_MLP=None,
+        position_head=None,
         proprio=None,
         proprio_projector=None,
     ):
@@ -878,31 +931,79 @@ class OpenVLAForActionPrediction(PrismaticForConditionalGeneration):
         )
 
         # Extract hidden states for action tokens
-        multi_layer_hidden_states = []
+        multi_layer_position_hidden_states = []
+        multi_layer_path_point_hidden_states = []
+        multi_layer_action_hidden_states = []
         
         for item in language_model_output.hidden_states[0:]:
             # last_hidden_states = output.hidden_states[-1]  # (B, seq_len, D)
             # Get hidden states for text portion of prompt+response (after the vision patches)
+            # item = item[:,1:]
             text_hidden_states = item
             # Get hidden states for action portion of response
-            actions_hidden_states = text_hidden_states[:, NUM_PATCHES+ NUM_PROMPT_TOKENS : NUM_PATCHES + NUM_PROMPT_TOKENS + NUM_TOKENS, :,].reshape(1, 1, NUM_TOKENS, -1).to(torch.bfloat16)
-            
-            batch_size = item.shape[0]
-            task_latten_states = item[:, :NUM_PATCHES].reshape(batch_size, 1, NUM_PATCHES , -1)
-            all_hidden_states = torch.cat((task_latten_states, actions_hidden_states),2)
-            multi_layer_hidden_states.append(all_hidden_states)
-            
-        multi_layer_hidden_states = torch.cat(multi_layer_hidden_states, dim = 1)
-        
+            query_hidden_states = text_hidden_states[:, NUM_PATCHES+ NUM_PROMPT_TOKENS : NUM_PATCHES + NUM_PROMPT_TOKENS + NUM_TOKENS, :,].reshape(1, 1, NUM_TOKENS, -1).to(torch.bfloat16)
+            taxt_hidden_states_use = text_hidden_states[:, NUM_PATCHES : NUM_PATCHES+ NUM_PROMPT_TOKENS, :,].reshape(1, 1, NUM_PROMPT_TOKENS, -1).to(torch.bfloat16)
+            third = NUM_TOKENS // 3
 
+            position_hidden_states = query_hidden_states[:, :, :third]
+            path_point_hidden_states   = query_hidden_states[:, :, third:2*third]
+            actions_hidden_states  = query_hidden_states[:, :, 2*third:3*third]
+            batch_size = item.shape[0]
+            position_hidden_states = torch.cat((taxt_hidden_states_use, position_hidden_states),2)
+            path_point_hidden_states = torch.cat((taxt_hidden_states_use, path_point_hidden_states),2)
+            actions_hidden_states = torch.cat((taxt_hidden_states_use, actions_hidden_states),2)
+            # task_latten_states = item[:, :NUM_PATCHES].reshape(batch_size, 1, NUM_PATCHES , -1)
+            # all_hidden_states = torch.cat((task_latten_states, actions_hidden_states),2)
+            # multi_layer_hidden_states.append(all_hidden_states)
+            task_latten_states = item[:, :NUM_PATCHES].reshape(batch_size, 1, NUM_PATCHES , -1)
+
+
+
+            for_position_hidden_states = torch.cat((task_latten_states, position_hidden_states),2)
+            for_path_point_hidden_states = torch.cat((task_latten_states, path_point_hidden_states),2)
+            for_action_hidden_states = torch.cat((task_latten_states, actions_hidden_states),2)
+
+            multi_layer_position_hidden_states.append(for_position_hidden_states)
+            multi_layer_path_point_hidden_states.append(for_path_point_hidden_states)
+            multi_layer_action_hidden_states.append(for_action_hidden_states)
+            
+        multi_layer_position_hidden_states = torch.cat(multi_layer_position_hidden_states, dim = 1)
         # Handle different prediction methods
-        if action_head is not None:
+        if position_head is not None and path_point_head is not None:
             # L1 regression prediction
-            normalized_actions = action_head.predict_action(multi_layer_hidden_states,
-                                                proprio=proprio,
-                                                proprio_projector=proprio_projector)
-            normalized_actions = normalized_actions.reshape(NUM_ACTIONS_CHUNK, ACTION_DIM)
+            normalized_predicted_position = position_head.predict_action(
+                multi_layer_position_hidden_states,
+                proprio=proprio,
+                proprio_projector=proprio_projector)
+            # normalized_predicted_position = target_rel_positions
+            normalized_predicted_position = normalized_predicted_position.reshape(NUM_ACTIONS_CHUNK, 1, 2)
+
+            position_token_embeddings = position_token_MLP(normalized_predicted_position).unsqueeze(1)
+            for i in range(len(multi_layer_path_point_hidden_states)):
+                multi_layer_path_point_hidden_states[i] = torch.cat((multi_layer_path_point_hidden_states[i], position_token_embeddings), 2)
+            multi_layer_path_point_hidden_states = torch.cat(multi_layer_path_point_hidden_states, dim = 1)
+            normalized_predicted_path_points = path_point_head.predict_action(
+                multi_layer_path_point_hidden_states,
+                proprio=proprio,
+                proprio_projector=proprio_projector)
+            normalized_predicted_path_points = normalized_predicted_path_points.reshape(NUM_ACTIONS_CHUNK, 8, 2)
+
+            path_point_token_embeddings = path_point_token_MLP(normalized_predicted_path_points).unsqueeze(1)
+            for i in range(len(multi_layer_action_hidden_states)):
+                multi_layer_action_hidden_states[i] = torch.cat((multi_layer_action_hidden_states[i], path_point_token_embeddings*0.8), 2)
+            multi_layer_action_hidden_states = torch.cat(multi_layer_action_hidden_states, dim = 1)
+            predicted_actions = action_head.predict_action(
+                multi_layer_action_hidden_states,
+                proprio=proprio,
+                proprio_projector=proprio_projector)
+            normalized_actions = predicted_actions.reshape(NUM_ACTIONS_CHUNK, ACTION_DIM)
+
             normalized_actions = normalized_actions.float().cpu().detach().numpy()
+            normalized_predicted_path_points = normalized_predicted_path_points.reshape(8, 2)
+            normalized_predicted_path_points = normalized_predicted_path_points.float().cpu().detach().numpy()
+            normalized_predicted_position = normalized_predicted_position.reshape(1, 2)
+            normalized_predicted_position = normalized_predicted_position.float().cpu().detach().numpy()
+            return normalized_actions, normalized_predicted_path_points, normalized_predicted_position
         else:
             # Discrete token-based prediction
             predicted_action_token_ids = (
@@ -919,34 +1020,45 @@ class OpenVLAForActionPrediction(PrismaticForConditionalGeneration):
             normalized_actions = self.bin_centers[discretized_actions]
             normalized_actions = normalized_actions.reshape(NUM_ACTIONS_CHUNK, ACTION_DIM)
 
-        return normalized_actions, actions_hidden_states
+        return normalized_actions, normalized_predicted_path_points, normalized_predicted_position
 
 
     def predict_action(
         self,
         input_ids: Optional[torch.LongTensor] = None,
+        target_rel_positions: Optional[torch.FloatTensor] = None,
         unnorm_key: Optional[str] = None,
         proprio=None,
         proprio_projector=None,
         action_head=None,
+        path_point_token_MLP=None,
+        path_point_head=None,
+        position_token_MLP=None,
+        position_head=None,
         noisy_action_projector=None,
         use_film: bool = False,
+        image_feature_memory: Optional[List[List[torch.Tensor]]] = None,
         **kwargs: str,
-    ) -> np.ndarray:
+    ) -> Tuple[np.ndarray, np.ndarray, Optional[List[List[torch.Tensor]]]]:
         """Predict actions from input sequence, with options for different prediction methods.
 
         Args:
             input_ids: Input token ids
+            target_rel_positions: Target relative positions in agent polar frame [angle(rad), dist(m)]
             unnorm_key: Key for unnormalization statistics
             proprio: Proprioceptive features
             proprio_projector: Projector for proprioceptive features
             action_head: Optional head for L1 regression or diffusion-based prediction
+            path_point_token_MLP: Optional path point token MLP for continuous value prediction
+            path_point_head: Optional path point head for continuous value prediction
+            position_token_MLP: Optional position token MLP for continuous value prediction
+            position_head: Optional position head for continuous value prediction
             noisy_action_projector: Projector for noisy actions in diffusion-based prediction
             use_film: Whether to use FiLM conditioning
             **kwargs: Additional arguments including pixel_values and attention_mask
 
         Returns:
-            Tuple of (unnormalized_actions, action_hidden_states)
+            Tuple of (unnormalized_actions, action_hidden_states, image_feature_memory)
         """
 
         pixel_values = kwargs["pixel_values"] # [1, 12, 224, 224]
@@ -975,7 +1087,7 @@ class OpenVLAForActionPrediction(PrismaticForConditionalGeneration):
         )
 
         # Process vision features
-        projected_patch_embeddings = self._process_vision_features(pixel_values, language_embeddings, use_film)
+        projected_patch_embeddings, image_feature_memory = self._process_vision_features(pixel_values, language_embeddings, use_film, image_feature_memory)
 
         # Add proprioceptive features if provided
         use_proprio = proprio_projector is not None and proprio is not None
@@ -983,11 +1095,13 @@ class OpenVLAForActionPrediction(PrismaticForConditionalGeneration):
             proprio = torch.Tensor(proprio).to(projected_patch_embeddings.device, dtype=projected_patch_embeddings.dtype)
 
         # Calculate number of patches (including proprio token and/or diffusion timestep embedding if present)
-        NUM_PATCHES = self.vision_backbone.get_num_patches() * self.vision_backbone.get_num_images_in_input()
+        # NUM_PATCHES = self.vision_backbone.get_num_patches() * self.vision_backbone.get_num_images_in_input()
+        NUM_PATCHES = 256
 
         # Run regression or discrete token-based prediction
-        normalized_actions, actions_hidden_states = self._regression_or_discrete_prediction(
+        normalized_actions, normalized_predicted_path_points, normalized_predicted_position = self._regression_or_discrete_prediction(
             input_embeddings,
+            target_rel_positions,
             all_actions_mask,
             projected_patch_embeddings,
             attention_mask,
@@ -995,14 +1109,19 @@ class OpenVLAForActionPrediction(PrismaticForConditionalGeneration):
             NUM_PATCHES,
             NUM_PROMPT_TOKENS,
             action_head=action_head,
+            path_point_token_MLP=path_point_token_MLP,
+            path_point_head=path_point_head,
+            position_token_MLP=position_token_MLP,
+            position_head=position_head,
             proprio=proprio, # [8]
             proprio_projector=proprio_projector,
             )
            
         # Unnormalize predicted actions
         actions = self._unnormalize_actions(normalized_actions, unnorm_key)
-
-        return actions, actions_hidden_states
+        predicted_path_points = self._unnormalize_path_points(normalized_predicted_path_points, unnorm_key)
+        predicted_position = self._unnormalize_position(normalized_predicted_position, unnorm_key)
+        return actions, predicted_path_points, predicted_position, image_feature_memory
 
 
 
@@ -1032,3 +1151,13 @@ class OpenVLAForActionPrediction(PrismaticForConditionalGeneration):
         """Get all the logged statistics for the given dataset."""
         unnorm_key = self._check_unnorm_key(self.norm_stats, unnorm_key)
         return self.norm_stats[unnorm_key]["action"]
+
+    def get_path_points_stats(self, unnorm_key: Optional[str] = None) -> Dict[str, Any]:
+        """Get all the logged statistics for the given dataset."""
+        unnorm_key = self._check_unnorm_key(self.norm_stats, unnorm_key)
+        return self.norm_stats[unnorm_key]["path_points"]
+    
+    def get_position_stats(self, unnorm_key: Optional[str] = None) -> Dict[str, Any]:
+        """Get all the logged statistics for the given dataset."""
+        unnorm_key = self._check_unnorm_key(self.norm_stats, unnorm_key)
+        return self.norm_stats[unnorm_key]["position"]

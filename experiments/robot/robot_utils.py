@@ -3,7 +3,7 @@
 import os
 import random
 import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -103,11 +103,16 @@ def get_action(
     task_label: str,
     processor: Optional[Any] = None,
     action_head: Optional[torch.nn.Module] = None,
+    path_point_token_MLP: Optional[torch.nn.Module] = None,
+    path_point_head: Optional[torch.nn.Module] = None,
+    position_token_MLP: Optional[torch.nn.Module] = None,
+    position_head: Optional[torch.nn.Module] = None,
     proprio_projector: Optional[torch.nn.Module] = None,
     noisy_action_projector: Optional[torch.nn.Module] = None,
     use_film: bool = False,
     use_minivlm: bool = False,
-) -> Union[List[np.ndarray], np.ndarray]:
+    image_feature_memory: Optional[List[List[torch.Tensor]]] = None,
+) -> Tuple[List[np.ndarray], Optional[List[np.ndarray]], Optional[List[np.ndarray]], Optional[List[List[torch.Tensor]]]]:
     """
     Query the model to get action predictions.
 
@@ -118,34 +123,43 @@ def get_action(
         task_label: Text description of the task
         processor: Model processor for inputs
         action_head: Optional action head for continuous actions
+        path_point_token_MLP: Optional path point token MLP for continuous value prediction
+        path_point_head: Optional path point head for continuous value prediction
+        position_token_MLP: Optional position token MLP for continuous value prediction
+        position_head: Optional position head for continuous value prediction
         proprio_projector: Optional proprioception projector
         noisy_action_projector: Optional noisy action projector for diffusion
         use_film: Whether to use FiLM
 
     Returns:
-        Union[List[np.ndarray], np.ndarray]: Predicted actions
+        Tuple[List[np.ndarray], Optional[List[np.ndarray]], Optional[List[np.ndarray]], Optional[List[List[torch.Tensor]]]]: Predicted actions, predicted path points, predicted position, and image feature memory
 
     Raises:
         ValueError: If model family is not supported
     """
     with torch.no_grad():
         if cfg.model_family == "openvla":
-            action = get_vla_action(
+            action, predicted_path_points, predicted_position, image_feature_memory = get_vla_action(
                 cfg=cfg,
                 vla=model,
                 processor=processor,
                 obs=obs,
                 task_label=task_label,
                 action_head=action_head,
+                path_point_token_MLP=path_point_token_MLP,
+                path_point_head=path_point_head,
+                position_token_MLP=position_token_MLP,
+                position_head=position_head,
                 proprio_projector=proprio_projector,
                 noisy_action_projector=noisy_action_projector,
                 use_film=use_film,
-                use_minivlm=use_minivlm
+                use_minivlm=use_minivlm,
+                image_feature_memory=image_feature_memory
             )
         else:
             raise ValueError(f"Unsupported model family: {cfg.model_family}")
 
-    return action
+    return action, predicted_path_points, predicted_position, image_feature_memory
 
 
 def normalize_gripper_action(action: np.ndarray, binarize: bool = True) -> np.ndarray:

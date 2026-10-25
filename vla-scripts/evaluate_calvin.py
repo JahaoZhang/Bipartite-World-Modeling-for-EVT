@@ -215,7 +215,6 @@ def evaluate_policy(model, env, eval_sr_path, eval_result_path, num_procs, procs
     else:
         val_annotations = OmegaConf.load(conf_dir / "annotations/new_playtable_validation.yaml")
 
-    # val_annotations = {key: val for key, val in val_annotations.items() if 'push' in key and 'right' in key}  # 只保留了push something right的任务！！！！！！！！
     eval_dir = get_log_dir(eval_dir)
     eval_sequences = get_sequences(num_sequences)
 
@@ -409,7 +408,7 @@ def rollout_hi3(env, model, task_oracle, subtask, val_annotations, debug, eval_d
     for step in range(80):
         action_buffers = [None, None, None]
 
-        action_buffers[0] = model.step(obs, lang_annotation, 0)  # 8个动作
+        action_buffers[0] = model.step(obs, lang_annotation, 0)
         action = action_buffers[0][0]
         action = process_action(action, "openvla")
         obs, reward, done, current_info = env.step(action.tolist())

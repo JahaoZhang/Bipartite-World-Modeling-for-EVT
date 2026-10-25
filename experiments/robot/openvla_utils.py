@@ -26,10 +26,11 @@ from prismatic.extern.hf.modeling_prismatic import OpenVLAForActionPrediction
 from prismatic.extern.hf.processing_prismatic import PrismaticImageProcessor, PrismaticProcessor
 from prismatic.models.action_heads import L1RegressionActionHead
 from prismatic.models.film_vit_wrapper import FiLMedPrismaticVisionBackbone
-from prismatic.models.projectors import NoisyActionProjector, ProprioProjector
+from prismatic.models.projectors import NoisyActionProjector, ProprioProjector, TrajMLP, PositionMLP
 from prismatic.vla.constants import (
     ACTION_DIM,
     ACTION_PROPRIO_NORMALIZATION_TYPE,
+    NUM_ACTIONS_CHUNK,
 )
 from prismatic.vla.datasets.rlds.utils.data_utils import NormalizationType
 
@@ -539,6 +540,210 @@ def get_action_head(cfg: Any, llm_dim: int) -> Union[L1RegressionActionHead]:
     return action_head
 
 
+def get_path_point_head(cfg: Any, llm_dim: int) -> Union[L1RegressionActionHead]:
+    """
+    Get path point head for continuous value prediction.
+
+    Args:
+        cfg: Configuration object with model parameters
+        llm_dim: Dimension of the language model
+
+    Returns:
+        Union[L1RegressionActionHead, DiffusionActionHead]: The initialized path point head
+
+    Raises:
+        AssertionError: If both L1 regression and diffusion are specified
+    """
+    if cfg.use_l1_regression:
+        path_point_head = L1RegressionActionHead(
+            input_dim=llm_dim, 
+            hidden_dim=llm_dim, 
+            action_dim=16,
+            use_pro_version=cfg.use_pro_version,
+        )
+
+    else:
+        raise ValueError("Either use_l1_regression or use_diffusion must be True")
+
+    path_point_head = path_point_head.to(torch.bfloat16).to(DEVICE)
+    path_point_head.eval()
+
+    # Find and load checkpoint (may be on Hugging Face Hub or stored locally)
+    if model_is_on_hf_hub(cfg.pretrained_checkpoint):
+        model_path_to_action_head_name = {
+            "VLA-Adapter/LIBERO-Spatial-Pro": "action_head--checkpoint.pt",
+            "VLA-Adapter/LIBERO-Object-Pro": "action_head--checkpoint.pt",
+            "VLA-Adapter/LIBERO-Goal-Pro": "action_head--checkpoint.pt",
+            "VLA-Adapter/LIBERO-Long-Pro": "action_head--checkpoint.pt",
+        }
+        if cfg.pretrained_checkpoint not in model_path_to_action_head_name.keys():
+            raise ValueError("Unsupported HF Hub pretrained checkpoint found!")
+        # Download proprio projector directly from HF Hub
+        path_point_head_path = hf_hub_download(
+            repo_id=cfg.pretrained_checkpoint, filename=model_path_to_action_head_name[cfg.pretrained_checkpoint]
+        )
+        state_dict = load_component_state_dict(path_point_head_path)
+        path_point_head.load_state_dict(state_dict)
+    else:
+        checkpoint_path = find_checkpoint_file(cfg.pretrained_checkpoint, "path_point_head")
+        state_dict = load_component_state_dict(checkpoint_path)
+        path_point_head.load_state_dict(state_dict)
+
+    return path_point_head
+
+def get_position_head(cfg: Any, llm_dim: int) -> Union[L1RegressionActionHead]:
+    """
+    Get position head for continuous value prediction.
+
+    Args:
+        cfg: Configuration object with model parameters
+        llm_dim: Dimension of the language model
+
+    Returns:
+        Union[L1RegressionActionHead, DiffusionActionHead]: The initialized position head
+
+    Raises:
+        AssertionError: If both L1 regression and diffusion are specified
+    """
+    if cfg.use_l1_regression:
+        position_head = L1RegressionActionHead(
+            input_dim=llm_dim, 
+            hidden_dim=llm_dim, 
+            action_dim=2,
+            use_pro_version=cfg.use_pro_version,
+        )
+
+    else:
+        raise ValueError("Either use_l1_regression or use_diffusion must be True")
+
+    position_head = position_head.to(torch.bfloat16).to(DEVICE)
+    position_head.eval()
+
+    # Find and load checkpoint (may be on Hugging Face Hub or stored locally)
+    if model_is_on_hf_hub(cfg.pretrained_checkpoint):
+        model_path_to_action_head_name = {
+            "VLA-Adapter/LIBERO-Spatial-Pro": "action_head--checkpoint.pt",
+            "VLA-Adapter/LIBERO-Object-Pro": "action_head--checkpoint.pt",
+            "VLA-Adapter/LIBERO-Goal-Pro": "action_head--checkpoint.pt",
+            "VLA-Adapter/LIBERO-Long-Pro": "action_head--checkpoint.pt",
+        }
+        if cfg.pretrained_checkpoint not in model_path_to_action_head_name.keys():
+            raise ValueError("Unsupported HF Hub pretrained checkpoint found!")
+        # Download proprio projector directly from HF Hub
+        position_head_path = hf_hub_download(
+            repo_id=cfg.pretrained_checkpoint, filename=model_path_to_action_head_name[cfg.pretrained_checkpoint]
+        )
+        state_dict = load_component_state_dict(position_head_path)
+        position_head.load_state_dict(state_dict)
+    else:
+        checkpoint_path = find_checkpoint_file(cfg.pretrained_checkpoint, "position_head")
+        state_dict = load_component_state_dict(checkpoint_path)
+        position_head.load_state_dict(state_dict)
+
+    return position_head
+
+def get_path_point_token_MLP(cfg: Any, llm_dim: int) -> Union[TrajMLP]:
+    """
+    Get path point token MLP for continuous value prediction.
+
+    Args:
+        cfg: Configuration object with model parameters
+        llm_dim: Dimension of the language model
+
+    Returns:
+        Union[TrajMLP]: The initialized path point token MLP
+
+    Raises:
+        AssertionError: If both L1 regression and diffusion are specified
+    """
+    # Initialize appropriate action head based on configuration
+    if cfg.use_l1_regression:
+        path_point_token_MLP = TrajMLP(
+            in_dim=2, 
+            hidden_dim=llm_dim // 2, 
+            out_dim=llm_dim,
+        )
+
+    else:
+        raise ValueError("Either use_l1_regression or use_diffusion must be True")
+
+    path_point_token_MLP = path_point_token_MLP.to(torch.bfloat16).to(DEVICE)
+    path_point_token_MLP.eval()
+
+    # Find and load checkpoint (may be on Hugging Face Hub or stored locally)
+    if model_is_on_hf_hub(cfg.pretrained_checkpoint):
+        model_path_to_action_head_name = {
+            "VLA-Adapter/LIBERO-Spatial-Pro": "action_head--checkpoint.pt",
+            "VLA-Adapter/LIBERO-Object-Pro": "action_head--checkpoint.pt",
+            "VLA-Adapter/LIBERO-Goal-Pro": "action_head--checkpoint.pt",
+            "VLA-Adapter/LIBERO-Long-Pro": "action_head--checkpoint.pt",
+        }
+        if cfg.pretrained_checkpoint not in model_path_to_action_head_name.keys():
+            raise ValueError("Unsupported HF Hub pretrained checkpoint found!")
+        # Download proprio projector directly from HF Hub
+        path_point_token_MLP_path = hf_hub_download(
+            repo_id=cfg.pretrained_checkpoint, filename=model_path_to_action_head_name[cfg.pretrained_checkpoint]
+        )
+        state_dict = load_component_state_dict(path_point_token_MLP_path)
+        path_point_token_MLP.load_state_dict(state_dict)
+    else:
+        checkpoint_path = find_checkpoint_file(cfg.pretrained_checkpoint, "path_point_token_MLP")
+        state_dict = load_component_state_dict(checkpoint_path)
+        path_point_token_MLP.load_state_dict(state_dict)
+
+    return path_point_token_MLP
+
+def get_position_token_MLP(cfg: Any, llm_dim: int) -> Union[PositionMLP]:
+    """
+    Get position token MLP for continuous value prediction.
+
+    Args:
+        cfg: Configuration object with model parameters
+        llm_dim: Dimension of the language model
+
+    Returns:
+        Union[PositionMLP]: The initialized position token MLP
+
+    Raises:
+        AssertionError: If both L1 regression and diffusion are specified
+    """
+    # Initialize appropriate action head based on configuration
+    if cfg.use_l1_regression:
+        position_token_MLP = PositionMLP(
+            in_dim=2, 
+            hidden_dim=llm_dim // 2, 
+            out_dim=llm_dim,
+        )
+
+    else:
+        raise ValueError("Either use_l1_regression or use_diffusion must be True")
+
+    position_token_MLP = position_token_MLP.to(torch.bfloat16).to(DEVICE)
+    position_token_MLP.eval()
+
+    # Find and load checkpoint (may be on Hugging Face Hub or stored locally)
+    if model_is_on_hf_hub(cfg.pretrained_checkpoint):
+        model_path_to_action_head_name = {
+            "VLA-Adapter/LIBERO-Spatial-Pro": "action_head--checkpoint.pt",
+            "VLA-Adapter/LIBERO-Object-Pro": "action_head--checkpoint.pt",
+            "VLA-Adapter/LIBERO-Goal-Pro": "action_head--checkpoint.pt",
+            "VLA-Adapter/LIBERO-Long-Pro": "action_head--checkpoint.pt",
+        }
+        if cfg.pretrained_checkpoint not in model_path_to_action_head_name.keys():
+            raise ValueError("Unsupported HF Hub pretrained checkpoint found!")
+        # Download proprio projector directly from HF Hub
+        position_token_MLP_path = hf_hub_download(
+            repo_id=cfg.pretrained_checkpoint, filename=model_path_to_action_head_name[cfg.pretrained_checkpoint]
+        )
+        state_dict = load_component_state_dict(position_token_MLP_path)
+        position_token_MLP.load_state_dict(state_dict)
+    else:
+        checkpoint_path = find_checkpoint_file(cfg.pretrained_checkpoint, "position_token_MLP")
+        state_dict = load_component_state_dict(checkpoint_path)
+        position_token_MLP.load_state_dict(state_dict)
+
+    return position_token_MLP
+
 def resize_image_for_policy(img: np.ndarray, resize_size: Union[int, Tuple[int, int]]) -> np.ndarray:
     """
     Resize an image to match the policy's expected input size.
@@ -701,6 +906,36 @@ def normalize_proprio(proprio: np.ndarray, norm_stats: Dict[str, Any]) -> np.nda
     return normalized_proprio
 
 
+def normalize_position(position: np.ndarray, norm_stats: Dict[str, Any]) -> np.ndarray:
+    """
+    Normalize position (polar [angle, distance]) to match training distribution.
+
+    Args:
+        position: Raw position in agent polar frame [angle(rad), distance(m)]
+        norm_stats: Position normalization statistics from dataset / checkpoint
+
+    Returns:
+        np.ndarray: Normalized position in [-1, 1]
+    """
+    if ACTION_PROPRIO_NORMALIZATION_TYPE == NormalizationType.BOUNDS:
+        mask = norm_stats.get("mask", np.ones_like(norm_stats["min"], dtype=bool))
+        position_high, position_low = np.array(norm_stats["max"]), np.array(norm_stats["min"])
+    elif ACTION_PROPRIO_NORMALIZATION_TYPE == NormalizationType.BOUNDS_Q99:
+        mask = norm_stats.get("mask", np.ones_like(norm_stats["q01"], dtype=bool))
+        position_high, position_low = np.array(norm_stats["q99"]), np.array(norm_stats["q01"])
+    else:
+        raise ValueError("Unsupported action/proprio normalization type detected!")
+
+    return np.clip(
+        np.where(
+            mask,
+            2 * (position - position_low) / (position_high - position_low + 1e-8) - 1,
+            position,
+        ),
+        a_min=-1.0,
+        a_max=1.0,
+    ).astype(np.float32)
+
 def prepare_images_for_vla(images: List[np.ndarray], cfg: Any) -> List[Image.Image]:
     """
     Prepare images for VLA input by resizing and cropping as needed.
@@ -741,11 +976,16 @@ def get_vla_action(
     obs: Dict[str, Any],
     task_label: str,
     action_head: Optional[torch.nn.Module] = None,
+    path_point_token_MLP: Optional[torch.nn.Module] = None,
+    path_point_head: Optional[torch.nn.Module] = None,
+    position_token_MLP: Optional[torch.nn.Module] = None,
+    position_head: Optional[torch.nn.Module] = None,
     proprio_projector: Optional[torch.nn.Module] = None,
     noisy_action_projector: Optional[torch.nn.Module] = None,
     use_film: bool = False,
     use_minivlm: bool = False,
-) -> List[np.ndarray]:
+    image_feature_memory: Optional[List[List[torch.Tensor]]] = None,
+) -> Tuple[List[np.ndarray], Optional[List[np.ndarray]], Optional[List[np.ndarray]], Optional[List[List[torch.Tensor]]]]:
     """
     Generate action predictions with the VLA policy.
 
@@ -756,17 +996,24 @@ def get_vla_action(
         obs: Observation dictionary
         task_label: Text description of the task
         action_head: Optional action head for continuous actions
+        path_point_token_MLP: Optional path point token MLP for continuous value prediction
+        path_point_head: Optional path point head for continuous value prediction
+        position_token_MLP: Optional position token MLP for continuous value prediction
+        position_head: Optional position head for continuous value prediction
         proprio_projector: Optional proprioception projector
         noisy_action_projector: Optional noisy action projector for diffusion
         use_film: Whether to use FiLM
 
     Returns:
-        List[np.ndarray]: Predicted actions
+        Tuple[List[np.ndarray], Optional[List[np.ndarray]], Optional[List[np.ndarray]], Optional[List[List[torch.Tensor]]]]: Predicted actions, predicted path points, predicted position, and image feature memory
     """
     with torch.inference_mode():
 
         # Collect all input images
         all_images = [obs["full_image"]]
+        target_rel_positions = torch.as_tensor(
+            obs["target_rel_position"], device=DEVICE, dtype=torch.bfloat16
+        ).reshape(NUM_ACTIONS_CHUNK, 1, 2)
         if cfg.num_images_in_input > 1:
             all_images.extend([obs[k] for k in obs.keys() if "wrist" in k])
 
@@ -778,8 +1025,10 @@ def get_vla_action(
 
         # Build VLA prompt
         if not use_minivlm:
+            # prompt = f"In: What action should the robot take to Keep up with this person?\nOut:"
             prompt = f"In: What action should the robot take to {task_label.lower()}?\nOut:"
         else:
+            # prompt = f'<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat action should the robot take to Keep up with this person?<|im_end|>\n<|im_start|>assistant\n'
             prompt = f'<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat action should the robot take to {task_label.lower()}?<|im_end|>\n<|im_start|>assistant\n'
 
         # Process primary image
@@ -810,7 +1059,8 @@ def get_vla_action(
             action, _ = vla.predict_action(**inputs, unnorm_key=cfg.unnorm_key, do_sample=False)
         else:
             # Custom action head for continuous actions
-            action, _ = vla.predict_action(
+            action, predicted_path_points, predicted_position, image_feature_memory = vla.predict_action(
+                target_rel_positions=target_rel_positions,
                 **inputs,
                 unnorm_key=cfg.unnorm_key,
                 do_sample=False,
@@ -818,11 +1068,16 @@ def get_vla_action(
                 proprio_projector=proprio_projector,
                 noisy_action_projector=noisy_action_projector,
                 action_head=action_head,
+                path_point_token_MLP=path_point_token_MLP,
+                path_point_head=path_point_head,
+                position_token_MLP=position_token_MLP,
+                position_head=position_head,
                 use_film=use_film,
+                image_feature_memory=image_feature_memory,
             )
 
     # Extract subset of actions for open loop steps
-    return [action[i] for i in range(min(len(action), cfg.num_open_loop_steps))]
+    return [action[i] for i in range(min(len(action), cfg.num_open_loop_steps))], predicted_path_points, predicted_position, image_feature_memory
 
 
 def get_action_from_server(

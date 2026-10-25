@@ -81,8 +81,7 @@ class GenerateConfig:
     # Model-specific parameters
     #################################################################################################################
     model_family: str = "openvla"                    # Model family
-    pretrained_checkpoint: Union[str, Path] = "/home/mmc_jhzhang/z_outputs/outputs_11images/pathpoints/224px/pathpoints_pad_action_next_position_envrebuild_targrtrebuild_lang_stt_dt_224px_Decoupling_envmask_63_onestate/configs+hm3dpathpadsttdt224px_dataset+b16+lr-0.0002+lora-r32+dropout-0.0--image_aug--VLA-Adapter--track--multi--pathpoints_pad_action_next_position_envrebuild_targrtrebuild_lang_stt_dt_224px_Decoupling_envmask----18000_chkpt"     # Pretrained checkpoint path
-    # pretrained_checkpoint: Union[str, Path] = "model"     # Pretrained checkpoint path
+    pretrained_checkpoint: Union[str, Path] = "model"     # Pretrained checkpoint path
     
     use_l1_regression: bool = True                   # If True, uses continuous action head with L1 regression objective
     use_minivlm: bool = True                         # If True, uses minivlm

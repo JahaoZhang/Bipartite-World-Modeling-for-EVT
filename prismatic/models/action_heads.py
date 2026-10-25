@@ -50,7 +50,6 @@ class L1RegressionActionHead(nn.Module):
         batch_size = actions_hidden_states.shape[0]
         device = actions_hidden_states.device
 
-        # ✅ 仅当两者都不为 None 时才计算 proprio_features
         if proprio is not None and proprio_projector is not None:
             proprio = proprio.reshape(batch_size, -1).to(torch.bfloat16)
             proprio_features = proprio_projector(proprio).unsqueeze(1)  # (B,1,D)
@@ -127,7 +126,7 @@ class MLPResNet(nn.Module):
         for i, block in enumerate(self.mlp_resnet_blocks):
                 kwargs = {}
                 if h_t is not None:
-                    kwargs["h_t"] = h_t[:, i+1, :]  # 注意确保长度充足
+                    kwargs["h_t"] = h_t[:, i+1, :]
                 if h_a is not None:
                     kwargs["h_a"] = h_a[:, i+1, :]
                 if p is not None:
@@ -364,7 +363,7 @@ class MLPResNetBlock_Pro(nn.Module):
         # concat h_a and p
         # h_adapter = torch.cat((h_a, p),dim=1)
 
-        # adapter = concat(h_a, p)（均可缺省）
+        # adapter = concat(h_a, p)
         parts = []
         if h_a is not None: parts.append(h_a)
         if p is not None:   parts.append(p)

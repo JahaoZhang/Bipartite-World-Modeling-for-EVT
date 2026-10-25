@@ -302,7 +302,6 @@ def pool_patches_in_box(patch_feats, boxes, img_size=224, grid_size=16):
     for b in range(B):
         x1, y1, x2, y2 = boxes[b].tolist()
 
-        # ---- 无效 / 不可见：-1 或 0面积 ----
         if (x1 < 0 or y1 < 0 or x2 < 0 or y2 < 0) or (x2 <= x1) or (y2 <= y1):
             out.append(patch_feats[b].mean(dim=0))
             continue
@@ -312,7 +311,6 @@ def pool_patches_in_box(patch_feats, boxes, img_size=224, grid_size=16):
         px2 = min(int((x2 - 1) // patch_size), grid_size - 1)
         py2 = min(int((y2 - 1) // patch_size), grid_size - 1)
 
-        # 防御：离散后变空
         if px1 > px2 or py1 > py2:
             out.append(patch_feats[b].mean(dim=0))
             continue
@@ -324,7 +322,6 @@ def pool_patches_in_box(patch_feats, boxes, img_size=224, grid_size=16):
         )
         idx = (ys * grid_size + xs).reshape(-1)
 
-        # 防御：idx 空
         if idx.numel() == 0:
             out.append(patch_feats[b].mean(dim=0))
         else:
@@ -349,9 +346,7 @@ def pool_patches_outside_box(patch_feats, boxes, img_size=224, grid_size=16):
     for b in range(B):
         x1, y1, x2, y2 = boxes[b].tolist()
 
-        # ---------- 防御 1：box 无效 ----------
         if (x1 < 0 or y1 < 0 or x2 < 0 or y2 < 0) or (x2 <= x1) or (y2 <= y1):
-            # 无 target，env = 全局
             out.append(patch_feats[b].mean(dim=0))
             continue
 
@@ -360,7 +355,6 @@ def pool_patches_outside_box(patch_feats, boxes, img_size=224, grid_size=16):
         px2 = min(int((x2 - 1) // patch_size), grid_size - 1)
         py2 = min(int((y2 - 1) // patch_size), grid_size - 1)
 
-        # ---------- 防御 2：离散后 box 为空 ----------
         if px1 > px2 or py1 > py2:
             out.append(patch_feats[b].mean(dim=0))
             continue
@@ -372,12 +366,10 @@ def pool_patches_outside_box(patch_feats, boxes, img_size=224, grid_size=16):
         )
         box_idx = (ys * grid_size + xs).reshape(-1)
 
-        # ---------- box 外 patch ----------
         mask = torch.ones(grid_size * grid_size, dtype=torch.bool, device=device)
         mask[box_idx] = False
         outside_idx = all_idx[mask]
 
-        # ---------- 防御 3：box 覆盖全图 ----------
         if outside_idx.numel() == 0:
             out.append(patch_feats[b].mean(dim=0))
         else:

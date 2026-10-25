@@ -137,7 +137,7 @@ class CrossAttentionDynamics(nn.Module):
         z = z_t + attn_out
 
         z = z + self.mlp(self.norm_ffn(z))
-        return z   # 只输出 latent
+        return z
 
 class LatentToFeature(nn.Module):
     def __init__(

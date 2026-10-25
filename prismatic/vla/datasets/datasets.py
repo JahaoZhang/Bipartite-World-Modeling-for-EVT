@@ -89,7 +89,7 @@ class RLDSBatchTransform:
             for turn in conversation:
                 prompt_builder.add_turn(turn["from"], turn["value"])
 
-            prompt = prompt_builder.get_prompt() #e.g. 'In: What action should the robot take to put both the cream cheese box and the butter in the basket?\nOut: 希</s>'
+            prompt = prompt_builder.get_prompt() 
             input_ids = self.base_tokenizer(prompt_builder.get_prompt(), add_special_tokens=True).input_ids
 
             if len(input_ids) >= 3:
@@ -129,7 +129,7 @@ class RLDSBatchTransform:
 
             for turn in conversation:
                 prompt_builder.add_turn(turn["from"], turn["value"])
-            prompt = prompt_builder.get_prompt() #e.g. 'In: What action should the robot take to put both the cream cheese box and the butter in the basket?\nOut: 希</s>'
+            prompt = prompt_builder.get_prompt()
             # Tokenize (w/ `base_tokenizer`)
             input_ids = self.base_tokenizer(prompt, add_special_tokens=True).input_ids
             labels = list(input_ids)
