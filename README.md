@@ -2,6 +2,16 @@
 
 # **Bipartite World Modeling: Unifying Egocentric and Allocentric Dynamics for Embodied Target Tracking**
 
+**Xuan Yao, Jiahao Zhang, Junyu Gao, Yong Rui and Changsheng Xu**
+
+
+
+> World models provide a principled framework for modeling latent dynamics in embodied agents. However, existing approaches typically rely on a unified latent representation that assumes single temporal transition, which may be insufficient for target-centric embodied settings where heterogeneous dynamics coexist. In such scenarios, agent motion induces rapid global scene changes, while task-relevant entities require temporally consistent representations over time.
+We propose a bipartite world modeling framework that structures the latent state into an egocentric component modeling scene evolution and an allocentric component maintaining temporally coherent target representation. These two states are jointly inferred and evolve through differentiated transition mechanisms within a unified world model.
+We evaluate our approach on embodied target tracking benchmarks, a representative setting where such heterogeneous dynamics are prominent. Experiments on three benchmarks demonstrate state-of-the-art performance, along with effective real-world deployment on a quadruped robot. 
+
+![image](figures/BWM.png)
+
 ---
 
 ## :loudspeaker: News!
