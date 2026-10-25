@@ -16,7 +16,9 @@ We evaluate our approach on embodied target tracking benchmarks, a representativ
 
 - **[2026/10/25]** We released our training codes! Everyone is welcome to use it! 🎉
 - **[2026/10/25]** We released the original Bipartite World Modeling checkpoint for EVT-Bench on [Hugging Face](https://huggingface.co/JahaoZhang/Bipartite-World-Modeling). 🎉
-- **[2026/08/28]** Our paper has been scheduled for **Oral Presentation** at ACM Multimedia 2026. 🎉
+- **[2026/08/28]** Our paper has been selected for an **Oral Presentation** at ACM Multimedia 2026! 🎉
+  - 🎤 **Oral:** November 11, 2026, 14:54–15:12 | Oceania IV–V
+  - 📌 **Poster:** November 11, 2026, 16:00–18:00 | Versailles
 - **[2026/07/10]** Our paper has been accepted to ACM Multimedia 2026. 🎉
 
 ---
