@@ -188,6 +188,12 @@ CUDA_VISIBLE_DEVICES=0 torchrun --standalone --nnodes 1 --nproc-per-node 1 vla-s
 
 ## :mechanical_arm: Online Evaluation
 
+Download the released checkpoint from [Hugging Face](https://huggingface.co/JahaoZhang/Bipartite-World-Modeling) and place it in the `model/` folder at the repository root. Evaluation loads weights from this folder.
+
+```bash
+hf download JahaoZhang/Bipartite-World-Modeling --local-dir model
+```
+
 Evaluate **BWM** on **EVT-Bench** by running:
 
 ```bash
