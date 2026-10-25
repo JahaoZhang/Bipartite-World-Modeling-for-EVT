@@ -71,13 +71,13 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 @dataclass
 class FinetuneConfig:
     # fmt: off
-    config_file_path: str = "/home/mmc_jhzhang/VLA-Adapter/pretrained_models/configs"     # Path to necessary config files of LA-Adapter
-    vlm_path: str = "/home/mmc_jhzhang/VLA-Adapter/pretrained_models/prism-qwen25-extra-dinosiglip-224px-0_5b"             # Path to OpenVLA model (on HuggingFace Hub or stored locally)
+    config_file_path: str = "/home/pretrained_models/configs"     # Path to necessary config files of LA-Adapter
+    vlm_path: str = "/home/pretrained_models/prism-qwen25-extra-dinosiglip-224px-0_5b"             # Path to OpenVLA model (on HuggingFace Hub or stored locally)
     use_minivlm: bool = False                        # 
-    resum_vla_path: str = "/home/mmc_jhzhang/openvla/openvla-7b"       # Path to OpenVLA model (on HuggingFace Hub or stored locally)
+    resum_vla_path: str = "/home/openvla/openvla-7b"       # Path to OpenVLA model (on HuggingFace Hub or stored locally)
 
     # Dataset
-    data_root_dir: Path = Path("/home/mmc_jhzhang/tensorflow_datasets/hm3dpath_dataset")      # Directory containing RLDS datasets
+    data_root_dir: Path = Path("/home/tensorflow_datasets/hm3dpath_dataset")      # Directory containing RLDS datasets
     dataset_name: str = "hm3dpath_dataset"    # Name of fine-tuning dataset (e.g., `aloha_scoop_x_into_bowl`)
     run_root_dir: Path = Path("outputs")                # Path to directory to store logs & checkpoints
     shuffle_buffer_size: int = 20_000               # Dataloader shuffle buffer size (can reduce if OOM errors occur)
@@ -121,8 +121,8 @@ class FinetuneConfig:
     use_fz: bool = False                             # If True, uses LoRA fine-tuning
 
     # Logging
-    wandb_entity: str = "kininialini-tianjin-university"          # Name of WandB entity
-    wandb_project: str = "vla-adapter-track"        # Name of WandB project
+    wandb_entity: str = ""          # Name of WandB entity
+    wandb_project: str = ""        # Name of WandB project
     run_id_note: Optional[str] = None                # Extra note to add to end of run ID for logging
     run_id_override: Optional[str] = None            # Optional string to override the run ID with
     wandb_log_freq: int = 10                         # WandB logging frequency in steps
