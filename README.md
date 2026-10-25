@@ -1,4 +1,4 @@
----
+
 
 # **Bipartite World Modeling: Unifying Egocentric and Allocentric Dynamics for Embodied Target Tracking**
 
@@ -10,7 +10,7 @@ We evaluate our approach on embodied target tracking benchmarks, a representativ
 
 ![image](figures/BWM.png)
 
----
+
 
 ## :loudspeaker: News!
 
