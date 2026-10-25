@@ -225,7 +225,12 @@ watch -n 1 python analyze_results.py --path /path/to/exp_results_folder
 ### 🫶 If you feel that this paper, models, or codes are helpful, please cite our paper, thanks for your support of Bipartite World Modeling!
 
 ```bibtex
-
+@inproceedings{yao2026bwm,
+  author    = {Xuan Yao and Jiahao Zhang and Junyu Gao and Yong Rui and Changsheng Xu},
+  title     = {Bipartite World Modeling: Unifying Egocentric and Allocentric Dynamics for Embodied Target Tracking},
+  booktitle = {Proceedings of the 34th ACM International Conference on Multimedia},
+  year      = {2026}
+}
 ```
 
 ## :heart: Acknowledgment
