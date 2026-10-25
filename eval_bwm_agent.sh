@@ -1,8 +1,8 @@
 CHUNKS=30
-SAVE_PATH_BASE="exp_results/BWM/dt_one_18000"
+SAVE_PATH_BASE="exp_results/BWM/stt"
 
 # Run splits in order: stt -> dt -> at
-SPLITS=(at)
+SPLITS=(stt)
 
 # Set to 1 to log single-process peak GPU memory via torch.cuda.max_memory_allocated()
 
@@ -10,12 +10,12 @@ SPLITS=(at)
 # CHUNKS=1 NUM_GPUS=1 PROCESSES_PER_GPU=1 GPU_IDS=(2)
 
 # 3 GPUs, 4 processes per GPU => 12 concurrent jobs per wave
-NUM_GPUS=4
-PROCESSES_PER_GPU=4
+NUM_GPUS=1
+PROCESSES_PER_GPU=1
 NUM_PARALLEL=$((NUM_GPUS * PROCESSES_PER_GPU))
 
 # Physical GPU IDs (length must equal NUM_GPUS), e.g. (4 5 6) for cards 4/5/6
-GPU_IDS=(4 5 6 7)
+GPU_IDS=(4)
 
 TRACK_GPU_MEMORY_ARGS=()
 if [ "$TRACK_GPU_MEMORY" = "1" ]; then
